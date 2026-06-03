@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>เก็บชั่วโมงจิตอาสา กยศ ออนไลน์ — บริการอัตโนมัติ</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['"IBM Plex Sans Thai"', '"IBM Plex Sans"', 'ui-sans-serif', 'system-ui'],
+          mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          // Tuned warm-neutral + indigo-violet trust palette
+          ink:       { DEFAULT: '#1B1B2E', 70: '#3B3B52', 50: '#6B6B82', 30: '#A8A8B8' },
+          paper:     { DEFAULT: '#FAF9F6', 1: '#F4F2EC', 2: '#ECEAE3' },
+          line:      { DEFAULT: '#E4E1D8', strong: '#D2CFC4' },
+          brand:     { DEFAULT: '#3D2EBF', deep: '#2A1F8C', soft: '#EDEAFE', mid: '#7A6DEE' },
+          mint:      { DEFAULT: '#1F9E73', soft: '#DDF3EA', ink: '#0F5C42' },
+          amber:     { DEFAULT: '#D08B1F', soft: '#FBEFD6' },
+          danger:    { DEFAULT: '#C03C3C', soft: '#FBE3E3' },
+        },
+        boxShadow: {
+          'soft': '0 1px 2px rgba(27,27,46,.04), 0 8px 24px -12px rgba(27,27,46,.12)',
+          'card': '0 1px 0 rgba(27,27,46,.04), 0 12px 36px -18px rgba(27,27,46,.18)',
+          'lift': '0 2px 0 rgba(27,27,46,.04), 0 24px 60px -24px rgba(61,46,191,.28)',
+        },
+        borderRadius: { 'xl2': '18px', '2xl2': '22px' },
+      }
+    }
+  }
+</script>
+
+<style>
+  html, body { background: #FAF9F6; color: #1B1B2E; }
+  body { font-family: "IBM Plex Sans Thai", "IBM Plex Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  h1,h2,h3,h4 { font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+  p, li { text-wrap: pretty; }
+  .num, code, kbd, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-feature-settings: "tnum"; }
+
+  /* Subtle grain on hero */
+  .grain::before {
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background-image: radial-gradient(rgba(27,27,46,.05) 1px, transparent 1px);
+    background-size: 4px 4px; mix-blend-mode: multiply;
+  }
+
+  /* Indigo gradient ring used on hero + CTA */
+  .ring-grad { background:
+    radial-gradient(ellipse at 20% 0%, rgba(122,109,238,.18), transparent 60%),
+    radial-gradient(ellipse at 90% 30%, rgba(31,158,115,.12), transparent 55%),
+    #FAF9F6; }
+
+  /* Inputs */
+  .field {
+    width:100%; background:#FFFFFF; border:1px solid #E4E1D8; border-radius:12px;
+    padding:14px 14px; font-size:15px; color:#1B1B2E; transition:all .15s ease;
+    font-family:"IBM Plex Sans Thai","IBM Plex Sans",sans-serif;
+  }
+  .field:focus { outline:none; border-color:#3D2EBF; box-shadow:0 0 0 4px rgba(61,46,191,.12); }
+  .field.has-error { border-color:#C03C3C; box-shadow:0 0 0 4px rgba(192,60,60,.10); }
+  .field-label { font-size:12.5px; font-weight:500; color:#3B3B52; letter-spacing:.02em; }
+  .helper { font-size:12px; color:#6B6B82; line-height:1.5; }
+
+  /* Buttons */
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:11px 18px; border-radius:11px; font-weight:500; font-size:14.5px;
+    transition: transform .12s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+    white-space:nowrap; }
+  .btn-primary { background:#1B1B2E; color:#FAF9F6; }
+  .btn-primary:hover { background:#3D2EBF; }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-ghost { background:transparent; color:#1B1B2E; border:1px solid #D2CFC4; }
+  .btn-ghost:hover { background:#F4F2EC; border-color:#1B1B2E; }
+  .btn-mint { background:#1F9E73; color:#fff; }
+  .btn-mint:hover { background:#0F5C42; }
+
+  .chip { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500;
+    padding:5px 10px; border-radius:999px; }
+
+  /* Course card */
+  .course-card { cursor:pointer; transition:all .15s ease; }
+  .course-card[data-on="true"] { border-color:#3D2EBF; background:#FFFFFF; box-shadow:0 0 0 3px rgba(61,46,191,.10); }
+  .course-card[data-on="false"]:hover { border-color:#A8A8B8; }
+
+  /* FAQ */
+  details > summary { list-style:none; cursor:pointer; }
+  details > summary::-webkit-details-marker { display:none; }
+  details[open] .faq-chev { transform: rotate(180deg); }
+  .faq-chev { transition: transform .2s ease; }
+
+  /* Scrollbar in log */
+  .logbox::-webkit-scrollbar { width:8px; }
+  .logbox::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius:4px; }
+
+  /* Smooth scrolling */
+  html { scroll-behavior: smooth; }
+
+  /* Progress shimmer */
+  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  .shimmer { background-image: linear-gradient(90deg, #3D2EBF 0%, #7A6DEE 50%, #3D2EBF 100%);
+    background-size: 200% 100%; animation: shimmer 2.2s linear infinite; }
+
+  /* Pulse dot */
+  @keyframes livepulse { 0%,100% { box-shadow: 0 0 0 0 rgba(31,158,115,.6); } 50% { box-shadow: 0 0 0 8px rgba(31,158,115,0); } }
+  .livedot { animation: livepulse 1.6s infinite; }
+
+  /* Mobile nav drawer */
+  .mn-link { display:block; padding:14px 0; font-size:17px; color:#1B1B2E; border-bottom:1px solid #ECEAE3; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<!-- framer-motion shim: small CSS-transition replacement loaded with the babel bundle below -->
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="/static/icons.jsx"></script>
+<script type="text/babel" src="/static/motion-shim.jsx"></script>
+<script type="text/babel" src="/static/tweaks-panel.jsx"></script>
+<script type="text/babel" src="/static/sections.jsx"></script>
+<script type="text/babel" src="/static/auth.jsx"></script>
+<script type="text/babel" src="/static/app.jsx"></script>
+</body>
+</html>

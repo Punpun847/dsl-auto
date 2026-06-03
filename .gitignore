@@ -1,0 +1,89 @@
+# ──────────────────────────────────────────────────────────────
+# Secrets — ห้าม commit
+# ──────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+prompts/answers*.txt           # อาจมี answer key — sensitive
+
+# PII — เลขบัตรประชาชน, รหัสผ่าน, mapping ชื่อจริง
+accounts.csv                   # NID + password ของ user (ห้าม commit เด็ดขาด)
+accounts_remaining.csv
+private_names.json             # mapping NID → ชื่อจริง (สำหรับ dashboard)
+smart_jobs.csv                 # NID + job_id
+nid_registry.json              # {sha256(NID): NID} สะสมทุก job — ให้ dashboard reverse hash
+
+# ──────────────────────────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+env/
+.python-version
+
+# ──────────────────────────────────────────────────────────────
+# Uploads & generated runtime files (อาจมีข้อมูล user)
+# ──────────────────────────────────────────────────────────────
+uploads/
+certs/                         # merged PDF ของ user — ข้อมูล personal
+/tmp/
+screenshots/
+*.png.tmp
+
+# Answer bank exports (mighe contain question text — keep template only)
+questions/answer_bank_*.json
+questions/dump.json            # อาจมีคำถามจริง — commit แค่ sample
+!questions/sample.json
+
+# ──────────────────────────────────────────────────────────────
+# Playwright
+# ──────────────────────────────────────────────────────────────
+playwright/.local-browsers/
+test-results/
+playwright-report/
+
+# ──────────────────────────────────────────────────────────────
+# Database
+# ──────────────────────────────────────────────────────────────
+*.sqlite
+*.db
+postgres_data/
+
+# ──────────────────────────────────────────────────────────────
+# Backups (ใหญ่ + อาจมีข้อมูล)
+# ──────────────────────────────────────────────────────────────
+backup-*.zip
+*.bak
+
+# ──────────────────────────────────────────────────────────────
+# Logs
+# ──────────────────────────────────────────────────────────────
+*.log
+uvicorn.log
+uvicorn.err
+worker.log
+celery.log
+
+# ──────────────────────────────────────────────────────────────
+# IDE / OS
+# ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+.history/
+
+# ──────────────────────────────────────────────────────────────
+# Stubs (development-only — ไม่ใช่ production)
+# ──────────────────────────────────────────────────────────────
+stubs/
