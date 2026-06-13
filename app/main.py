@@ -3,12 +3,11 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from app.api import admin, auth, courses, jobs, payments, ws
+from app.api import admin, admin_panel, auth, courses, jobs, payments, ws
 from app.config import settings
 
 app = FastAPI(title="GYSO Automation API", version="1.0.0")
@@ -32,25 +31,27 @@ app.include_router(payments.router, prefix="/payments", tags=["payments"])
 app.include_router(courses.router, prefix="/courses", tags=["courses"])
 app.include_router(ws.router, tags=["websocket"])
 app.include_router(admin.router)
+app.include_router(admin_panel.router)
 app.include_router(auth.router)
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
-app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+UI_DIR = Path(__file__).parent.parent / "ui"
 
 
 @app.get("/health")
 async def health():
     """Health + runtime flags ที่ frontend ใช้แสดง UI ให้ตรง backend mode"""
+    from app.utils.runtime_settings import get_free_mode
     return {
         "status": "ok",
-        "free_mode": settings.free_mode,
+        "free_mode": await get_free_mode(),
         "price_per_hour": 3,
     }
 
 
 @app.get("/")
 async def index():
-    return FileResponse(FRONTEND_DIR / "SLF Auto Volunteer.html")
+    return FileResponse(UI_DIR / "index.html")
 
 
 @app.get("/admin-panel")

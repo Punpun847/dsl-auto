@@ -826,17 +826,27 @@ class DSLClient:
         done_cnt = sum(1 for p in new_topics if p >= 100)
         await log("sys", f"หลัง mark: เสร็จ {done_cnt}/{len(new_topics)} topics", "70")
 
-        # ── 5. Pre-test ────────────────────────────────────────────
-        await log("sys", "Pre-test...", "72")
-        await self._submit_exam(enroll_id, "pre-test", course_id=str(course_id))
+        # ── 5-7. แบบทดสอบ — ทำเฉพาะที่คอร์สมีจริง (อ่านจาก course_data) ──
+        #   field pre_test/post_test/exam ใน course_data (null = คอร์สไม่มี → ข้าม
+        #   กันเสีย ~33s/component รอ poll radio ที่ไม่มี). API ไม่ส่ง key → ทำตามเดิม
+        def _has_component(key: str) -> bool:
+            return key not in course_data or course_data.get(key) is not None
 
-        # ── 6. Post-test ───────────────────────────────────────────
-        await log("sys", "Post-test...", "82")
-        await self._submit_exam(enroll_id, "post-test", course_id=str(course_id))
+        if _has_component("pre_test"):
+            await log("sys", "Pre-test...", "72")
+            await self._submit_exam(enroll_id, "pre-test", course_id=str(course_id))
 
-        # ── 7. Examination — ลองทำเสมอ (ถ้าไม่มี radio จะ return เอง) ──
-        await log("sys", "Examination...", "88")
-        await self._submit_exam(enroll_id, "exam", course_id=str(course_id))
+        if _has_component("post_test"):
+            await log("sys", "Post-test...", "82")
+            await self._submit_exam(enroll_id, "post-test", course_id=str(course_id))
+        else:
+            await log("sys", "คอร์สนี้ไม่มี Post-test — ข้าม", "82")
+
+        if _has_component("exam"):
+            await log("sys", "Examination...", "88")
+            await self._submit_exam(enroll_id, "exam", course_id=str(course_id))
+        else:
+            await log("sys", "คอร์สนี้ไม่มี Examination — ข้าม", "88")
 
         # ── 7b. ทำ survey ในหน้า /summary ──────────────────────────
         await log("sys", "ทำแบบสอบถาม...", "90")
@@ -952,7 +962,7 @@ class DSLClient:
             return out;
         }""")
 
-    async def _submit_exam(self, enroll_id: int, exam_type: str, course_id: str = "") -> None:
+    async def _submit_exam(self, enroll_id: int, exam_type: str, course_id: str = "", cache_only: bool = False) -> None:
         """ทำ exam ผ่าน API — อ่านเฉลยจาก score page หลัง submit เพื่อ cache คำตอบ
         เพื่อให้ attempt ถัดไปใช้คำตอบที่ถูกได้ (กัน SET randomize per attempt)"""
         # type values (ตรวจสอบจาก cert response field mapping):
@@ -1146,7 +1156,12 @@ class DSLClient:
             #   attempt 1: Claude ตรงๆ (second opinion ตอน attempt 0 ตอบผิด)
             #   attempt 2+: cache + rotation อย่างเดียว
             llm_indices = None
-            if attempt == 0:
+            # cache-first: ถ้าทุกข้ออยู่ใน cache แล้ว → ไม่ต้องเรียก LLM (ประหยัด cost + เร็ว)
+            #   ข้อใหม่/คอร์สใหม่ (n_cache_miss > 0) → เรียก LLM ตามเดิมเพื่อเรียนรู้
+            n_cache_miss = sum(1 for q in qdata if self._question_hash(q.get("q_text", "")) not in cache)
+            if n_cache_miss == 0 and not cache_only and attempt == 0:
+                logger.info(f"    ✅ cache ครบทุกข้อ ({len(qdata)} ข้อ) — ข้าม LLM (ไม่เสีย cost)")
+            if attempt == 0 and not cache_only and n_cache_miss > 0:
                 for _di, _dq in enumerate(qdata[:2]):
                     logger.info(f"    [DOM q{_di+1}] q_text={repr(_dq.get('q_text','')[:120])} opts={[o.get('text','')[:40] for o in _dq.get('options',[])[:4]]}")
                 logger.info(f"    LLM: ถาม {len(qdata)} ข้อ (DeepSeek primary)…")
@@ -1155,7 +1170,7 @@ class DSLClient:
                     logger.info(f"    LLM: ได้คำตอบ {llm_indices}")
                 else:
                     logger.warning(f"    LLM: ตอบไม่ได้ → fallback rotation")
-            elif attempt == 1:
+            elif attempt == 1 and not cache_only and n_cache_miss > 0:
                 logger.info(f"    LLM: ถาม {len(qdata)} ข้อ (Claude — second opinion)…")
                 llm_indices = await answer_quiz(qdata, force_provider="claude")
                 if llm_indices is not None:
@@ -1233,6 +1248,15 @@ class DSLClient:
                         logger.info(f"    📝 record {n_recorded} ข้อใหม่ → pending_dump")
             except Exception as _e:
                 logger.warning(f"    pending record fail: {_e}")
+
+            # ไม่มี LLM ช่วย (cache_only TEST หรือ cache ครบแต่บาง entry map option ไม่ได้)
+            #   → เติม option แรกแล้ว submit (กัน skip submit → 0 คะแนน) แทนการข้าม
+            if (cache_only or n_cache_miss == 0) and missing_idx:
+                for i in missing_idx:
+                    indices[i] = 0
+                tag = "cache-only" if cache_only else "cache-skip-LLM"
+                logger.info(f"    [{tag}] เติม {len(missing_idx)} ข้อที่ map ไม่ได้ ด้วย option แรก แล้ว submit")
+                missing_idx = []
 
             if missing_idx:
                 missing_qs = [qdata[i].get("q_text", "")[:60] for i in missing_idx]

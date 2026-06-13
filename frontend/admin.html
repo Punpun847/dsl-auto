@@ -1,153 +1,635 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="utf-8"/>
-<title>Admin Test Panel</title>
-<style>
-  body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
-  h1 { font-size: 20px; }
-  .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
-  button { background: #3D2EBF; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-  button:hover { background: #2a1f8c; }
-  button.red { background: #c03c3c; }
-  button.green { background: #1f9e73; }
-  button:disabled { background: #aaa; cursor: not-allowed; }
-  .tag { display:inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-  .pending { background:#fbefd6; color:#d08b1f; }
-  .queued  { background:#ddf3ea; color:#0f5c42; }
-  .running { background:#edeafe; color:#3d2ebf; }
-  .done    { background:#ddf3ea; color:#0f5c42; }
-  .failed  { background:#fbe3e3; color:#c03c3c; }
-  table { width:100%; border-collapse:collapse; font-size:13px; }
-  td, th { padding: 8px 10px; border-bottom: 1px solid #eee; text-align:left; }
-  th { color: #666; font-weight: 500; }
-  pre { background:#1b1b2e; color:#eee; padding:12px; border-radius:8px; font-size:12px; overflow-x:auto; white-space:pre-wrap; }
-  .row { display:flex; gap:8px; flex-wrap:wrap; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dsl auto — แผงผู้ดูแลระบบ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        fontFamily: { sans: ['Inter', 'Noto Sans Thai', 'sans-serif'] },
+        colors: { brand: { 50:'#eff6ff',100:'#dbeafe',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',900:'#1e3a8a' } },
+      } },
+    };
+  </script>
+  <style>
+    body { font-family: 'Inter', 'Noto Sans Thai', sans-serif; }
+    .app-bg { background:
+        radial-gradient(60rem 60rem at 8% -10%, #dbeafe 0%, transparent 50%),
+        radial-gradient(50rem 50rem at 110% 0%, #cffafe 0%, transparent 45%),
+        linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%); }
+    .sidebar-bg { background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 60%, #1d4ed8 100%); }
+    .nav-item.active { background: rgba(255,255,255,.14); color:#fff; }
+    .nav-item:hover { background: rgba(255,255,255,.08); }
+    ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:8px; }
+    .spin { animation: sp 1s linear infinite; } @keyframes sp { to { transform: rotate(360deg); } }
+  </style>
 </head>
-<body>
+<body class="app-bg min-h-screen text-slate-800">
 
-<h1>🛠 Admin Test Panel</h1>
-
-<div class="card">
-  <b>สร้าง Job ทดสอบ</b>
-  <p style="font-size:13px;color:#666;margin:6px 0 12px">กดปุ่มเดียว — สร้าง job + bypass OCR + ส่งเข้า queue</p>
-  <div class="row">
-    <button onclick="createTestJob()">▶ สร้าง Job ทดสอบ</button>
-    <button onclick="loadJobs()" style="background:#555">↻ รีเฟรชรายการ</button>
+  <!-- ═══════════════ LOGIN ═══════════════ -->
+  <div id="loginView" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-9 h-9 rounded-xl sidebar-bg flex items-center justify-center text-white font-bold">⚡</div>
+        <div class="text-xl font-extrabold">dsl <span class="text-brand-600">admin</span></div>
+      </div>
+      <p class="text-sm text-slate-500 mb-6">แผงผู้ดูแลระบบ — เฉพาะแอดมินเท่านั้น</p>
+      <label class="text-xs font-semibold text-slate-600">อีเมล</label>
+      <input id="email" type="email" class="w-full mt-1 mb-3 px-3 py-2.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="admin@example.com" />
+      <label class="text-xs font-semibold text-slate-600">รหัสผ่าน</label>
+      <input id="password" type="password" class="w-full mt-1 mb-4 px-3 py-2.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+      <button onclick="doLogin()" id="loginBtn" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold transition">เข้าสู่ระบบ</button>
+      <p id="loginErr" class="text-sm text-red-500 mt-3 hidden"></p>
+    </div>
   </div>
-</div>
 
-<div class="card">
-  <b>รายการ Jobs</b>
-  <table id="jobs-table">
-    <thead><tr><th>ID</th><th>Status</th><th>หลักสูตร</th><th>ราคา</th><th>เวลา</th><th>จัดการ</th></tr></thead>
-    <tbody id="jobs-body"><tr><td colspan="6" style="color:#aaa">กำลังโหลด…</td></tr></tbody>
-  </table>
-</div>
+  <!-- ═══════════════ APP ═══════════════ -->
+  <div id="appView" class="hidden min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="sidebar-bg w-60 shrink-0 text-blue-100 flex flex-col fixed inset-y-0 left-0">
+      <div class="px-5 py-5 flex items-center gap-2 border-b border-white/10">
+        <div class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center text-white font-bold">⚡</div>
+        <div class="text-white font-extrabold text-lg">dsl <span class="text-blue-300">admin</span></div>
+      </div>
+      <nav class="flex-1 px-3 py-4 space-y-1 text-sm">
+        <a onclick="show('dashboard')" data-sec="dashboard" class="nav-item active flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition">📊 <span>ภาพรวม</span></a>
+        <a onclick="show('jobs')" data-sec="jobs" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition">🗂️ <span>งานทั้งหมด</span></a>
+        <a onclick="show('runfree')" data-sec="runfree" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition">🚀 <span>ใช้งานฟรี</span></a>
+        <a onclick="show('logs')" data-sec="logs" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition">📜 <span>Log การทำงาน</span></a>
+        <a onclick="show('bank')" data-sec="bank" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition">🧠 <span>คลังคำตอบ</span></a>
+        <a onclick="show('users')" data-sec="users" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition">👥 <span>ผู้ใช้งาน</span></a>
+        <a onclick="show('payments')" data-sec="payments" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition">💳 <span>การเงิน</span></a>
+        <a onclick="show('settings')" data-sec="settings" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition">⚙️ <span>ตั้งค่าระบบ</span></a>
+      </nav>
+      <div class="px-3 py-3 border-t border-white/10">
+        <a href="/" class="block text-xs text-blue-200 hover:text-white px-3 py-2">← ไปหน้าลูกค้า</a>
+      </div>
+    </aside>
 
-<div class="card" id="log-card" style="display:none">
-  <b>Log: <span id="log-job-id"></span></b>
-  <pre id="log-box" style="margin-top:8px;max-height:300px;overflow-y:auto">รอ log…</pre>
-</div>
+    <!-- Main -->
+    <main class="flex-1 ml-60">
+      <!-- Topbar -->
+      <header class="sticky top-0 z-10 bg-white/70 backdrop-blur border-b border-slate-200 px-7 py-3.5 flex items-center justify-between">
+        <h1 id="pageTitle" class="text-lg font-bold">ภาพรวมระบบ</h1>
+        <div class="flex items-center gap-3">
+          <button onclick="refresh()" class="text-sm px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center gap-1.5"><span id="refIcon">↻</span> รีเฟรช</button>
+          <div class="flex items-center gap-2 text-sm">
+            <div class="w-7 h-7 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-semibold text-xs" id="avatar">A</div>
+            <span id="adminEmail" class="text-slate-600 hidden sm:block"></span>
+          </div>
+          <button onclick="logout()" class="text-sm text-slate-500 hover:text-red-500">ออก</button>
+        </div>
+      </header>
+
+      <div class="p-7">
+        <!-- ───── DASHBOARD ───── -->
+        <section data-view="dashboard">
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="statCards"></div>
+          <div class="grid lg:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 lg:col-span-2">
+              <h3 class="font-semibold mb-4 text-slate-700">งานแยกตามสถานะ</h3>
+              <div id="statusBars" class="space-y-3"></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+              <h3 class="font-semibold mb-4 text-slate-700">สถานะระบบ</h3>
+              <div id="systemBox" class="space-y-3 text-sm"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───── JOBS ───── -->
+        <section data-view="jobs" class="hidden">
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            <input id="jobSearch" oninput="loadJobs()" placeholder="ค้นหา NID hash / อีเมล / job id" class="px-3 py-2 rounded-xl border border-slate-200 text-sm w-72 outline-none focus:border-brand-500" />
+            <select id="jobStatus" onchange="loadJobs()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm outline-none">
+              <option value="all">ทุกสถานะ</option><option value="pending">pending</option><option value="queued">queued</option>
+              <option value="running">running</option><option value="done">done</option><option value="failed">failed</option>
+            </select>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+                <tr><th class="text-left px-4 py-3">งาน</th><th class="text-left px-4 py-3">ผู้ใช้</th><th class="text-center px-4 py-3">คอร์ส</th><th class="text-center px-4 py-3">สถานะ</th><th class="text-right px-4 py-3">ยอด</th><th class="px-4 py-3">วันที่</th><th class="px-4 py-3 text-right">จัดการ</th></tr>
+              </thead>
+              <tbody id="jobsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ───── RUN FREE (admin ใช้งานฟรีเอง) ───── -->
+        <section data-view="runfree" class="hidden">
+          <div class="grid lg:grid-cols-2 gap-4">
+            <!-- form -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+              <h3 class="font-semibold mb-1 text-slate-700">รันงานฟรี (สำหรับแอดมิน)</h3>
+              <p class="text-xs text-slate-500 mb-4">กรอกเลขบัตร + รหัสผ่าน DSL → ดึงคอร์ส → เลือก → เริ่มได้เลย ไม่ต้องจ่ายเงิน (ฟรีเสมอ ไม่ขึ้นกับ FREE_MODE)</p>
+              <label class="text-xs font-semibold text-slate-600">เลขบัตรประชาชน (13 หลัก)</label>
+              <input id="rfNid" inputmode="numeric" maxlength="13" class="w-full mt-1 mb-3 px-3 py-2.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none font-mono" placeholder="1234567890123" />
+              <label class="text-xs font-semibold text-slate-600">รหัสผ่าน DSL</label>
+              <input id="rfPwd" type="password" class="w-full mt-1 mb-4 px-3 py-2.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="••••••••" />
+              <button onclick="rfFetch()" id="rfFetchBtn" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold transition">ดึงคอร์ส</button>
+              <p id="rfErr" class="text-sm text-red-500 mt-3 hidden"></p>
+            </div>
+            <!-- courses + run -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-slate-700">คอร์สที่ต้องทำ</h3>
+                <button id="rfSelAll" onclick="rfToggleAll()" class="text-xs text-brand-600 hover:underline hidden">เลือก/ล้างทั้งหมด</button>
+              </div>
+              <!-- เลือกตามชั่วโมงเป้าหมาย -->
+              <div id="rfHourBox" class="hidden mb-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+                <label class="text-xs font-semibold text-slate-600">ชั่วโมงเป้าหมาย (ระบบเลือกคอร์สให้ครบ ไม่เกิน)</label>
+                <div class="flex gap-2 mt-1.5">
+                  <input id="rfTargetHours" type="number" min="0" step="0.5" class="flex-1 px-3 py-2 rounded-lg border border-slate-200 focus:border-brand-500 outline-none text-sm" placeholder="เช่น 6" oninput="rfAutoSelectByHours()" />
+                  <button onclick="rfAutoSelectByHours()" class="px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold whitespace-nowrap">เลือกตามชั่วโมง</button>
+                </div>
+                <div id="rfHourSummary" class="text-xs text-slate-500 mt-2"></div>
+              </div>
+              <div id="rfCourses" class="space-y-2 text-sm text-slate-400">— ยังไม่ได้ดึงคอร์ส —</div>
+              <button onclick="rfRun()" id="rfRunBtn" class="w-full mt-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition hidden">🚀 เริ่มงานฟรี</button>
+              <div id="rfResult" class="mt-4 hidden"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───── LOGS (realtime) ───── -->
+        <section data-view="logs" class="hidden">
+          <div class="grid lg:grid-cols-3 gap-4">
+            <!-- job list -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 lg:col-span-1">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-slate-700 text-sm">เลือกงานเพื่อดู log</h3>
+                <button onclick="loadLogJobs()" class="text-xs text-brand-600 hover:underline">รีเฟรช</button>
+              </div>
+              <div id="logJobList" class="space-y-1.5 max-h-[70vh] overflow-auto text-sm">—</div>
+            </div>
+            <!-- console -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 lg:col-span-2 flex flex-col">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <h3 class="font-semibold text-slate-700 text-sm">Log</h3>
+                  <span id="logJobId" class="font-mono text-xs text-slate-400"></span>
+                  <span id="logStatus"></span>
+                  <span id="logLive" class="hidden text-xs text-emerald-600 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>สด</span>
+                </div>
+                <button onclick="logScrollBottom()" class="text-xs text-slate-400 hover:text-slate-600">↓ ล่างสุด</button>
+              </div>
+              <div class="h-2 rounded-full bg-slate-100 overflow-hidden mb-2">
+                <div id="logProgress" class="h-full rounded-full bg-brand-500 transition-all duration-500" style="width:0%"></div>
+              </div>
+              <div id="logConsole" class="flex-1 min-h-[60vh] max-h-[70vh] overflow-auto rounded-xl bg-slate-900 text-slate-100 font-mono text-xs p-3 space-y-1">
+                <div class="text-slate-500">— เลือกงานจากรายการทางซ้าย —</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───── BANK ───── -->
+        <section data-view="bank" class="hidden">
+          <div class="grid sm:grid-cols-3 gap-4 mb-6" id="bankCards"></div>
+          <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-slate-700">ตัวอย่างเฉลยใน bank</h3>
+              <button onclick="exportBank()" class="text-sm px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100">⬇ Export backup</button>
+            </div>
+            <div id="bankSample" class="font-mono text-xs space-y-1 text-slate-600"></div>
+          </div>
+        </section>
+
+        <!-- ───── USERS ───── -->
+        <section data-view="users" class="hidden">
+          <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+                <tr><th class="text-left px-4 py-3">อีเมล</th><th class="text-center px-4 py-3">งาน</th><th class="text-center px-4 py-3">แอดมิน</th><th class="text-center px-4 py-3">สถานะ</th><th class="px-4 py-3">สมัครเมื่อ</th><th class="px-4 py-3 text-right">จัดการ</th></tr>
+              </thead>
+              <tbody id="usersBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ───── PAYMENTS ───── -->
+        <section data-view="payments" class="hidden">
+          <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+                <tr><th class="text-left px-4 py-3">Job</th><th class="text-right px-4 py-3">ยอด</th><th class="text-left px-4 py-3">อ้างอิง</th><th class="text-center px-4 py-3">ยืนยัน</th><th class="px-4 py-3">วันที่</th><th class="px-4 py-3 text-right">สลิป</th></tr>
+              </thead>
+              <tbody id="paymentsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ───── SETTINGS ───── -->
+        <section data-view="settings" class="hidden">
+          <div class="grid lg:grid-cols-2 gap-4">
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+              <h3 class="font-semibold mb-4 text-slate-700">โหมดระบบ</h3>
+              <!-- FREE_MODE toggle (สด) -->
+              <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 mb-4">
+                <div>
+                  <div class="font-semibold text-slate-800">FREE_MODE — ให้ลูกค้าใช้ฟรี</div>
+                  <div id="fmDesc" class="text-xs text-slate-500 mt-0.5">เปิด = ลูกค้าไม่ต้องจ่ายเงิน/แนบสลิป · ปิด = เก็บเงินตามปกติ</div>
+                </div>
+                <button id="fmToggle" onclick="toggleFreeMode()" role="switch" aria-checked="false"
+                  class="relative w-14 h-8 rounded-full bg-slate-300 transition-colors duration-200 shrink-0">
+                  <span id="fmKnob" class="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform duration-200"></span>
+                </button>
+              </div>
+              <div id="settingsBox" class="space-y-3 text-sm"></div>
+              <p class="text-xs text-slate-400 mt-4">FREE_MODE เปลี่ยนได้ทันที (มีผลกับลูกค้าเลย) · ส่วนราคา/LLM ตั้งใน <code>.env</code></p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+              <h3 class="font-semibold mb-4 text-slate-700">Engine</h3>
+              <ul class="text-sm space-y-2 text-slate-600">
+                <li>✅ ตอบจาก answer bank ก่อน (cache-first)</li>
+                <li>✅ ข้าม LLM เมื่อ cache ครบทุกข้อ (ไม่เสีย cost)</li>
+                <li>✅ ข้ามแบบทดสอบที่คอร์สไม่มี (เร็วขึ้น)</li>
+                <li>✅ canonical hash (กัน SET สลับลำดับข้อ)</li>
+              </ul>
+            </div>
+            <!-- Worker control -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 lg:col-span-2">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="font-semibold text-slate-700">ตัวประมวลผลงาน (Workers)</h3>
+                <span id="wkBadge" class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">— กำลังเช็ค</span>
+              </div>
+              <p class="text-xs text-slate-500 mb-4">worker = ตัวที่หยิบงานไปทำจริง (เปิด browser เข้า DSL/SET) · รัน 4 ตัว = ทำพร้อมกันได้ 4 งาน</p>
+              <div class="flex flex-wrap gap-2">
+                <button onclick="workerAction('start')" id="wkStart" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition">▶ เปิด (4 ตัว)</button>
+                <button onclick="workerAction('restart')" id="wkRestart" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition">↻ รีสตาร์ท</button>
+                <button onclick="workerAction('stop')" id="wkStop" class="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition">■ ปิด</button>
+                <button onclick="loadWorkers()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm">เช็คสถานะ</button>
+              </div>
+              <p id="wkMsg" class="text-xs text-slate-500 mt-3 font-mono whitespace-pre-wrap"></p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
 
 <script>
-const BASE = window.location.origin;
-const AUTH = 'Basic ' + btoa('admin:admin1234');
+const API = location.origin;
+let TOKEN = localStorage.getItem('dsl_admin_token') || '';
+const $ = id => document.getElementById(id);
+const TITLES = { dashboard:'ภาพรวมระบบ', jobs:'งานทั้งหมด', runfree:'ใช้งานฟรี (แอดมิน)', logs:'Log การทำงาน (realtime)', bank:'คลังคำตอบ (Answer Bank)', users:'ผู้ใช้งาน', payments:'การเงิน', settings:'ตั้งค่าระบบ' };
+let CURRENT = 'dashboard';
 
-async function api(method, path, body) {
-  const opts = { method, headers: { Authorization: AUTH } };
-  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
-  const r = await fetch(BASE + path, opts);
-  return r.json();
+async function api(path, opts={}) {
+  const r = await fetch(API + path, { ...opts, headers: { 'Authorization': 'Bearer ' + TOKEN, ...(opts.headers||{}) } });
+  if (r.status === 401 || r.status === 403) { logout(); throw new Error('unauthorized'); }
+  return r;
 }
 
-async function createTestJob() {
-  const btn = event.target;
-  btn.disabled = true; btn.textContent = 'กำลังสร้าง…';
-
-  // 1. สร้าง job ด้วย FormData
-  const form = new FormData();
-  form.append('nid', '3101234567893');
-  form.append('pwd', 'testpassword123');
-  form.append('courses', '["anti"]');
-  form.append('total_price', '179');
-  form.append('total_hours', '6');
-  // สร้างไฟล์ dummy เป็น slip
-  const blob = new Blob(['test slip'], { type: 'image/jpeg' });
-  form.append('slip', blob, 'test-slip.jpg');
-
-  const job = await fetch(BASE + '/jobs/', { method: 'POST', headers: { Authorization: AUTH }, body: form }).then(r => r.json());
-
-  if (!job.id) { alert('สร้าง job ล้มเหลว: ' + JSON.stringify(job)); btn.disabled=false; btn.textContent='▶ สร้าง Job ทดสอบ'; return; }
-
-  // 2. force verify (ข้าม OCR)
-  await api('POST', `/admin/jobs/${job.id}/force-verify`);
-
-  btn.disabled = false; btn.textContent = '▶ สร้าง Job ทดสอบ';
-  await loadJobs();
-  watchLogs(job.id);
+// ───── auth ─────
+async function doLogin() {
+  const btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...';
+  $('loginErr').classList.add('hidden');
+  try {
+    const form = new URLSearchParams({ username: $('email').value, password: $('password').value });
+    const r = await fetch(API + '/auth/login', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: form });
+    if (!r.ok) throw new Error('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+    TOKEN = (await r.json()).access_token;
+    const me = await fetch(API + '/auth/me', { headers:{'Authorization':'Bearer '+TOKEN} }).then(r=>r.json());
+    if (!me.is_admin) throw new Error('บัญชีนี้ไม่ใช่แอดมิน — เข้าได้เฉพาะผู้ดูแลระบบ');
+    localStorage.setItem('dsl_admin_token', TOKEN);
+    enterApp(me);
+  } catch(e) { $('loginErr').textContent = e.message; $('loginErr').classList.remove('hidden'); }
+  finally { btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ'; }
+}
+function logout(){ localStorage.removeItem('dsl_admin_token'); TOKEN=''; $('appView').classList.add('hidden'); $('loginView').classList.remove('hidden'); }
+function enterApp(me){
+  $('loginView').classList.add('hidden'); $('appView').classList.remove('hidden');
+  $('adminEmail').textContent = me.email; $('avatar').textContent = (me.email[0]||'A').toUpperCase();
+  show('dashboard');
 }
 
-async function loadJobs() {
-  const jobs = await api('GET', '/admin/jobs');
-  const tbody = document.getElementById('jobs-body');
-  if (!jobs.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:#aaa">ยังไม่มี job</td></tr>'; return; }
-  tbody.innerHTML = jobs.map(j => `
-    <tr>
-      <td style="font-family:monospace;font-size:11px">${j.id.slice(0,8)}…</td>
-      <td><span class="tag ${j.status}">${j.status}</span></td>
-      <td>${j.courses.join(', ')}</td>
-      <td>฿${j.total_price}</td>
-      <td style="font-size:11px;color:#888">${new Date(j.created_at).toLocaleTimeString('th')}</td>
-      <td>
-        <div class="row">
-          <button onclick="watchLogs('${j.id}')" style="background:#555;padding:5px 10px;font-size:12px">📋 Log</button>
-          <button onclick="forceVerify('${j.id}')" class="green" style="padding:5px 10px;font-size:12px">✓ Force</button>
-          <button onclick="deleteJob('${j.id}')" class="red" style="padding:5px 10px;font-size:12px">✕ ลบ</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+// ───── nav ─────
+function show(sec){
+  CURRENT = sec;
+  document.querySelectorAll('[data-view]').forEach(s=>s.classList.toggle('hidden', s.dataset.view!==sec));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.sec===sec));
+  $('pageTitle').textContent = TITLES[sec];
+  refresh();
+}
+function refresh(){
+  const i=$('refIcon'); i.classList.add('spin'); setTimeout(()=>i.classList.remove('spin'),600);
+  ({dashboard:loadDashboard, jobs:loadJobs, runfree:()=>{}, logs:loadLogJobs, bank:loadBank, users:loadUsers, payments:loadPayments, settings:loadSettings}[CURRENT]||(()=>{}))();
 }
 
-async function forceVerify(id) {
-  const r = await api('POST', `/admin/jobs/${id}/force-verify`);
-  alert(r.message || JSON.stringify(r));
-  loadJobs();
-  watchLogs(id);
+// ───── helpers ─────
+const fmt = d => d ? new Date(d).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+const STBADGE = { pending:'bg-slate-100 text-slate-600', queued:'bg-amber-100 text-amber-700', running:'bg-blue-100 text-blue-700 animate-pulse', done:'bg-emerald-100 text-emerald-700', failed:'bg-red-100 text-red-600' };
+const badge = s => `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${STBADGE[s]||'bg-slate-100'}">${s}</span>`;
+const card = (label,val,sub,icon,grad) => `<div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+  <div class="flex items-center justify-between"><span class="text-sm text-slate-500">${label}</span><span class="w-9 h-9 rounded-xl ${grad} flex items-center justify-center">${icon}</span></div>
+  <div class="text-3xl font-extrabold mt-2">${val}</div><div class="text-xs text-slate-400 mt-1">${sub||''}</div></div>`;
+
+// ───── DASHBOARD ─────
+async function loadDashboard(){
+  const d = await (await api('/admin/overview')).json();
+  $('statCards').innerHTML =
+    card('งานทั้งหมด', d.jobs.total, `วันนี้ ${d.jobs.today} งาน`, '🗂️','bg-blue-50') +
+    card('สำเร็จ', d.jobs.success_rate+'%', `done ${d.jobs.by_status.done||0} งาน`, '✅','bg-emerald-50') +
+    card('วุฒิบัตร', d.certs, 'ออกแล้วทั้งหมด', '📜','bg-violet-50') +
+    card('รายได้', '฿'+d.revenue.toLocaleString(), `${d.users} ผู้ใช้`, '💰','bg-amber-50');
+  const order=['running','queued','pending','done','failed']; const max=Math.max(1,...Object.values(d.jobs.by_status));
+  $('statusBars').innerHTML = order.map(s=>{const v=d.jobs.by_status[s]||0; return `<div>
+    <div class="flex justify-between text-xs mb-1"><span>${badge(s)}</span><span class="font-semibold">${v}</span></div>
+    <div class="h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full ${s==='failed'?'bg-red-400':s==='done'?'bg-emerald-400':'bg-brand-500'}" style="width:${v/max*100}%"></div></div></div>`;}).join('');
+  const sys=d.system; const dot=(ok)=>`<span class="w-2 h-2 rounded-full ${ok?'bg-emerald-500':'bg-red-500'} inline-block"></span>`;
+  $('systemBox').innerHTML = [
+    ['Celery workers', `${dot(sys.workers>0)} ${sys.workers} ออนไลน์`],
+    ['Answer bank', `${sys.bank_size.toLocaleString()} ข้อ`],
+    ['คิวงานค้าง', `${sys.queue_len} งาน`],
+    ['โหมดฟรี', sys.free_mode?'<span class="text-emerald-600 font-medium">เปิด</span>':'<span class="text-slate-500">ปิด</span>'],
+    ['ราคา/ชม.', '฿'+sys.price_per_hour],
+  ].map(([k,v])=>`<div class="flex justify-between items-center"><span class="text-slate-500">${k}</span><span class="font-medium">${v}</span></div>`).join('');
 }
 
-async function deleteJob(id) {
-  if (!confirm('ลบ job นี้?')) return;
-  await api('DELETE', `/admin/jobs/${id}`);
-  loadJobs();
+// ───── JOBS ─────
+async function loadJobs(){
+  const q=$('jobSearch').value, st=$('jobStatus').value;
+  const jobs = await (await api(`/admin/panel/jobs?status=${st}&q=${encodeURIComponent(q)}`)).json();
+  $('jobsBody').innerHTML = jobs.length ? jobs.map(j=>`<tr class="border-t border-slate-100 hover:bg-slate-50">
+    <td class="px-4 py-3 font-mono text-xs text-slate-500">${j.id.slice(0,8)}</td>
+    <td class="px-4 py-3">${j.email||'<span class=text-slate-400>—</span>'}</td>
+    <td class="px-4 py-3 text-center">${j.n_courses}</td>
+    <td class="px-4 py-3 text-center">${badge(j.status)}</td>
+    <td class="px-4 py-3 text-right">฿${j.total_price}</td>
+    <td class="px-4 py-3 text-slate-500 text-xs">${fmt(j.created_at)}</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap">
+      <button onclick="gotoLog('${j.id}')" class="text-slate-500 hover:text-brand-600 hover:underline text-xs mr-2">log</button>
+      ${j.status==='done'?`<button onclick="downloadBundle('${j.id}',this)" class="text-emerald-600 hover:underline text-xs mr-2 font-medium">⬇ วุฒิบัตรรวม</button>`:''}
+      ${j.status==='failed'||j.status==='pending'?`<button onclick="retryJob('${j.id}')" class="text-amber-600 hover:underline text-xs mr-2">retry</button>`:''}
+      <button onclick="delJob('${j.id}')" class="text-red-500 hover:underline text-xs">ลบ</button>
+    </td></tr>`).join('') : `<tr><td colspan="7" class="text-center text-slate-400 py-10">ไม่มีงาน</td></tr>`;
+}
+async function downloadBundle(id, btn){
+  const old = btn ? btn.textContent : '';
+  if(btn){ btn.disabled=true; btn.textContent='กำลังโหลด...'; }
+  try {
+    const r = await api(`/jobs/${id}/certificates/bundle`);
+    if(!r.ok){ alert(r.status===404?'ยังไม่มีวุฒิบัตรสำหรับงานนี้':'ดาวน์โหลดไม่สำเร็จ'); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `certificates_${id.slice(0,8)}.pdf`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  } catch(e){ alert('ดาวน์โหลดไม่สำเร็จ: '+e.message); }
+  finally { if(btn){ btn.disabled=false; btn.textContent=old; } }
+}
+async function gotoLog(id){ show('logs'); await loadLogJobs(); openJobLog(id); }
+async function retryJob(id){ if(!confirm('ส่งงานนี้เข้า queue ใหม่?'))return; await api(`/admin/panel/jobs/${id}/retry`,{method:'POST'}); loadJobs(); }
+async function delJob(id){ if(!confirm('ลบงานนี้ถาวร?'))return; await api(`/admin/panel/jobs/${id}`,{method:'DELETE'}); loadJobs(); }
+
+// ───── BANK ─────
+async function loadBank(){
+  const d = await (await api('/admin/panel/bank')).json();
+  $('bankCards').innerHTML =
+    card('เฉลยใน bank', (d.size||0).toLocaleString(), 'ข้อใน Redis', '🧠','bg-blue-50') +
+    card('สถานะ', d.error?'⚠️':'พร้อม', d.error||'cache-only ใช้งานได้', '⚡','bg-emerald-50') +
+    card('แชร์ได้', 'ใช่', 'export → import เครื่องอื่น', '🔗','bg-violet-50');
+  $('bankSample').innerHTML = (d.sample||[]).map(s=>`<div class="truncate"><span class="text-brand-600">${s.hash}</span> → ${s.value}</div>`).join('') || '<span class=text-slate-400>—</span>';
+}
+function exportBank(){ alert('Export: รัน `python scripts/answer_bank.py export backup.json` บนเซิร์ฟเวอร์ (มีคำสั่งอยู่แล้ว)'); }
+
+// ───── USERS ─────
+async function loadUsers(){
+  const us = await (await api('/admin/panel/users')).json();
+  $('usersBody').innerHTML = us.map(u=>`<tr class="border-t border-slate-100 hover:bg-slate-50">
+    <td class="px-4 py-3">${u.email}</td>
+    <td class="px-4 py-3 text-center">${u.jobs}</td>
+    <td class="px-4 py-3 text-center">${u.is_admin?'<span class="text-brand-600">★</span>':'—'}</td>
+    <td class="px-4 py-3 text-center">${u.is_active?'<span class="text-emerald-600">active</span>':'<span class="text-slate-400">ปิด</span>'}</td>
+    <td class="px-4 py-3 text-slate-500 text-xs">${fmt(u.created_at)}</td>
+    <td class="px-4 py-3 text-right"><button onclick="toggleAdmin('${u.id}')" class="text-xs text-brand-600 hover:underline">${u.is_admin?'ถอนแอดมิน':'ตั้งแอดมิน'}</button></td>
+    </tr>`).join('');
+}
+async function toggleAdmin(id){ if(!confirm('เปลี่ยนสิทธิ์แอดมินของผู้ใช้นี้?'))return; await api(`/admin/panel/users/${id}/toggle-admin`,{method:'POST'}); loadUsers(); }
+
+// ───── PAYMENTS ─────
+async function loadPayments(){
+  const ps = await (await api('/admin/panel/payments')).json();
+  $('paymentsBody').innerHTML = ps.length ? ps.map(p=>`<tr class="border-t border-slate-100 hover:bg-slate-50">
+    <td class="px-4 py-3 font-mono text-xs text-slate-500">${p.job_id.slice(0,8)}</td>
+    <td class="px-4 py-3 text-right">${p.amount?'฿'+p.amount:'—'}</td>
+    <td class="px-4 py-3 text-xs text-slate-500">${p.reference||'—'}</td>
+    <td class="px-4 py-3 text-center">${p.verified?'<span class="text-emerald-600">✓</span>':'<span class="text-slate-400">รอ</span>'}</td>
+    <td class="px-4 py-3 text-slate-500 text-xs">${fmt(p.created_at)}</td>
+    <td class="px-4 py-3 text-right">${p.slip_path&&p.slip_path!=='FREE'?`<a href="/${p.slip_path}" target="_blank" class="text-brand-600 hover:underline text-xs">ดูสลิป</a>`:'<span class="text-slate-400 text-xs">FREE</span>'}</td>
+    </tr>`).join('') : `<tr><td colspan="6" class="text-center text-slate-400 py-10">ไม่มีรายการ</td></tr>`;
 }
 
-let ws;
-function watchLogs(jobId) {
-  if (ws) ws.close();
-  document.getElementById('log-card').style.display = 'block';
-  document.getElementById('log-job-id').textContent = jobId.slice(0,8) + '…';
-  const box = document.getElementById('log-box');
-  box.textContent = 'กำลังเชื่อม WebSocket…\n';
+// ───── SETTINGS ─────
+function setFmUI(on){
+  const t=$('fmToggle'), k=$('fmKnob');
+  t.setAttribute('aria-checked', on);
+  t.classList.toggle('bg-emerald-500', on); t.classList.toggle('bg-slate-300', !on);
+  k.style.transform = on ? 'translateX(24px)' : 'translateX(0)';
+  $('fmDesc').innerHTML = on
+    ? '<span class="text-emerald-600 font-medium">กำลังเปิด</span> — ลูกค้าใช้ฟรี ไม่ต้องจ่าย/แนบสลิป'
+    : 'เปิด = ลูกค้าไม่ต้องจ่ายเงิน/แนบสลิป · ปิด = เก็บเงินตามปกติ';
+}
+function setWkBadge(n){
+  const b=$('wkBadge');
+  if(n>0){ b.textContent=`● ออนไลน์ ${n} ตัว`; b.className='px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700'; }
+  else { b.textContent='● หยุดอยู่'; b.className='px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-600'; }
+}
+async function loadWorkers(){
+  try { const d=await (await api('/admin/panel/workers')).json(); setWkBadge(d.count); }
+  catch(e){ $('wkBadge').textContent='เช็คไม่ได้'; }
+}
+async function workerAction(act){
+  const label={start:'เปิด',stop:'ปิด',restart:'รีสตาร์ท'}[act];
+  if(!confirm(`${label} workers ตอนนี้?`)) return;
+  for(const id of ['wkStart','wkStop','wkRestart']) $(id).disabled=true;
+  $('wkMsg').textContent=`กำลัง${label}...`;
+  try {
+    const d=await (await api('/admin/panel/workers/'+act,{method:'POST'})).json();
+    setWkBadge(d.count);
+    $('wkMsg').textContent=`✓ ${label}แล้ว — ออนไลน์ ${d.count} ตัว\n${d.message||''}`;
+  } catch(e){ $('wkMsg').textContent='✗ ทำไม่สำเร็จ: '+e.message; }
+  finally { for(const id of ['wkStart','wkStop','wkRestart']) $(id).disabled=false; }
+}
+async function loadSettings(){
+  loadWorkers();
+  const d = await (await api('/admin/overview')).json(); const s=d.system;
+  setFmUI(!!s.free_mode);
+  $('settingsBox').innerHTML = [
+    ['ราคาต่อชั่วโมง', '฿'+s.price_per_hour],
+    ['Celery workers', s.workers+' ออนไลน์'],
+    ['Answer bank', s.bank_size.toLocaleString()+' ข้อ'],
+  ].map(([k,v])=>`<div class="flex justify-between items-center py-1"><span class="text-slate-500">${k}</span><span class="font-medium">${v}</span></div>`).join('');
+}
+async function toggleFreeMode(){
+  const cur = $('fmToggle').getAttribute('aria-checked')==='true';
+  const next = !cur;
+  if(!confirm(next?'เปิด FREE_MODE — ลูกค้าจะใช้ฟรีทันที?':'ปิด FREE_MODE — กลับมาเก็บเงินตามปกติ?'))return;
+  setFmUI(next); // optimistic
+  try {
+    const r = await (await api('/admin/panel/free-mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:next})})).json();
+    setFmUI(!!r.free_mode);
+  } catch(e){ setFmUI(cur); alert('เปลี่ยนไม่สำเร็จ'); }
+}
 
-  ws = new WebSocket(`${BASE.replace(/^http/, 'ws')}/ws/jobs/${jobId}`);
-  ws.onmessage = e => {
-    const d = JSON.parse(e.data);
-    if (d.event === 'snapshot') {
-      box.textContent = d.logs.length ? d.logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n') + '\n' : 'รอ log…\n';
-    } else if (d.event === 'log') {
-      box.textContent += `[${d.type.toUpperCase()}] ${d.message}\n`;
-      box.scrollTop = box.scrollHeight;
+// ───── RUN FREE (admin) ─────
+let RF_COURSES = [];   // คอร์สที่ดึงมา [{id,title,hours,...}]
+function rfShowErr(m){ const e=$('rfErr'); e.textContent=m; e.classList.toggle('hidden', !m); }
+async function rfFetch(){
+  const nid = $('rfNid').value.replace(/\D/g,''), pwd = $('rfPwd').value;
+  rfShowErr('');
+  if(nid.length!==13){ rfShowErr('เลขบัตรต้อง 13 หลัก'); return; }
+  if(!pwd){ rfShowErr('กรอกรหัสผ่าน'); return; }
+  const btn=$('rfFetchBtn'); btn.disabled=true; btn.textContent='กำลังดึงคอร์ส...';
+  $('rfCourses').innerHTML='<span class="text-slate-400">กำลังเข้าระบบ DSL แล้วดึงคอร์ส (อาจใช้เวลาสักครู่)...</span>';
+  $('rfRunBtn').classList.add('hidden'); $('rfSelAll').classList.add('hidden'); $('rfResult').classList.add('hidden');
+  try {
+    const r = await fetch(API+'/courses/fetch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nid,pwd})});
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.detail||'ดึงคอร์สไม่สำเร็จ');
+    RF_COURSES = data;
+    rfRenderCourses();
+  } catch(e){ rfShowErr(e.message); $('rfCourses').innerHTML='<span class="text-slate-400">— ยังไม่ได้ดึงคอร์ส —</span>'; }
+  finally { btn.disabled=false; btn.textContent='ดึงคอร์ส'; }
+}
+function rfRenderCourses(){
+  if(!RF_COURSES.length){ $('rfCourses').innerHTML='<span class="text-slate-400">ไม่พบคอร์สที่ต้องทำ (อาจทำครบแล้ว)</span>'; $('rfHourBox').classList.add('hidden'); return; }
+  const totalH = RF_COURSES.reduce((s,c)=>s+(+c.hours||0),0);
+  $('rfCourses').innerHTML = RF_COURSES.map((c,i)=>`<label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer">
+    <input type="checkbox" class="rf-cb w-4 h-4 accent-emerald-600" data-i="${i}" onchange="rfSync()" />
+    <span class="flex-1"><span class="font-medium">${c.title||c.id}</span><span class="text-xs text-slate-400 block">${c.hours||0} ชม.</span></span>
+  </label>`).join('');
+  $('rfHourBox').classList.remove('hidden');
+  $('rfTargetHours').max = totalH;
+  $('rfTargetHours').placeholder = `เช่น 6 (มีให้เลือกรวม ${totalH} ชม.)`;
+  $('rfSelAll').classList.remove('hidden'); $('rfRunBtn').classList.remove('hidden');
+  rfSync();
+}
+function rfSelected(){ return [...document.querySelectorAll('.rf-cb:checked')].map(cb=>RF_COURSES[+cb.dataset.i]); }
+function rfSelectedHours(){ return rfSelected().reduce((s,c)=>s+(+c.hours||0),0); }
+// เลือกคอร์สอัตโนมัติให้รวมชั่วโมง "ใกล้เป้าหมายที่สุดแต่ไม่เกิน" (greedy คอร์สใหญ่ก่อน)
+function rfAutoSelectByHours(){
+  const target = parseFloat($('rfTargetHours').value);
+  if(!(target>0)){ document.querySelectorAll('.rf-cb').forEach(cb=>cb.checked=false); rfSync(); return; }
+  const order = RF_COURSES.map((c,i)=>i).sort((a,b)=>(+RF_COURSES[b].hours||0)-(+RF_COURSES[a].hours||0));
+  let sum=0; const pick=new Set();
+  for(const i of order){ const h=+RF_COURSES[i].hours||0; if(h>0 && sum+h<=target+1e-6){ pick.add(i); sum+=h; } }
+  document.querySelectorAll('.rf-cb').forEach(cb=>{ cb.checked = pick.has(+cb.dataset.i); });
+  rfSync();
+}
+function rfSync(){
+  const n=rfSelected().length, h=rfSelectedHours();
+  $('rfRunBtn').textContent = n ? `🚀 เริ่มงานฟรี (${n} คอร์ส · ${h} ชม.)` : '🚀 เลือกชั่วโมง/คอร์สก่อน';
+  $('rfRunBtn').disabled = !n;
+  const target = parseFloat($('rfTargetHours').value);
+  if(target>0){
+    const diff = target - h;
+    $('rfHourSummary').innerHTML = `เลือก <b>${n}</b> คอร์ส รวม <b>${h}</b> ชม. / เป้าหมาย ${target} ชม.` +
+      (diff>0 ? ` <span class="text-amber-600">(ขาดอีก ${diff.toFixed(1)} ชม. — ไม่มีคอร์สที่ลงได้พอดี)</span>` : ` <span class="text-emerald-600">✓ ครบพอดี ไม่เกิน</span>`);
+  } else {
+    $('rfHourSummary').innerHTML = n ? `เลือกเอง <b>${n}</b> คอร์ส รวม <b>${h}</b> ชม.` : '';
+  }
+}
+function rfToggleAll(){
+  const cbs=[...document.querySelectorAll('.rf-cb')]; const all=cbs.every(c=>c.checked);
+  cbs.forEach(c=>c.checked=!all); rfSync();
+}
+async function rfRun(){
+  const sel = rfSelected();
+  if(!sel.length) return;
+  if(!confirm(`เริ่มงานฟรี ${sel.length} คอร์ส?`)) return;
+  const btn=$('rfRunBtn'); btn.disabled=true; btn.textContent='กำลังสร้างงาน...';
+  try {
+    const body = {
+      nid: $('rfNid').value.replace(/\D/g,''),
+      pwd: $('rfPwd').value,
+      courses: sel.map(c=>c.id),
+      total_hours: String(sel.reduce((s,c)=>s+(+c.hours||0),0)),
+    };
+    const r = await (await api('/admin/panel/run-free',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}));
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.detail||'สร้างงานไม่สำเร็จ');
+    $('rfResult').classList.remove('hidden');
+    $('rfResult').innerHTML = `<div class="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-sm">
+      <div class="font-semibold text-emerald-700 mb-1">✅ เริ่มงานแล้ว — กำลังทำงานอัตโนมัติ</div>
+      <div class="text-slate-600">Job <span class="font-mono">${data.id.slice(0,8)}</span> · ${data.n_courses} คอร์ส · สถานะ <span class="font-medium">${data.status}</span></div>
+      <button onclick="show('jobs')" class="mt-2 text-brand-600 hover:underline text-xs">→ ดูใน "งานทั้งหมด"</button>
+    </div>`;
+  } catch(e){ rfShowErr(e.message); }
+  finally { btn.disabled=false; rfSync(); }
+}
+
+// ───── LOGS (realtime via WebSocket) ─────
+let LOG_WS = null, LOG_JOB = null;
+async function loadLogJobs(){
+  const jobs = await (await api('/admin/panel/jobs?status=all&limit=60')).json();
+  $('logJobList').innerHTML = jobs.length ? jobs.map(j=>`
+    <div onclick="openJobLog('${j.id}')" data-logjob="${j.id}"
+      class="logjob px-3 py-2 rounded-xl cursor-pointer border border-transparent hover:bg-slate-50 ${LOG_JOB===j.id?'bg-brand-50 border-brand-100':''}">
+      <div class="flex items-center justify-between">
+        <span class="font-mono text-xs text-slate-500">${j.id.slice(0,8)}</span>${badge(j.status)}
+      </div>
+      <div class="text-xs text-slate-400 mt-0.5">${j.email||'—'} · ${j.n_courses} คอร์ส · ${fmt(j.created_at)}</div>
+    </div>`).join('') : '<div class="text-slate-400 text-xs py-6 text-center">ไม่มีงาน</div>';
+}
+const LOGCOLOR = { sys:'text-slate-300', ok:'text-emerald-400', play:'text-sky-400', warn:'text-amber-400', err:'text-red-400', done:'text-emerald-300 font-bold' };
+function logLine(d){
+  const t = d.ts ? new Date(d.ts).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+  const pct = d.progress!=null && d.progress!=='' ? ` <span class="text-slate-500">[${d.progress}%]</span>` : '';
+  return `<div><span class="text-slate-600">${t}</span> <span class="${LOGCOLOR[d.type]||'text-slate-200'}">${(d.type||'').padEnd(4)}</span>${pct} ${(d.message||'').replace(/</g,'&lt;')}</div>`;
+}
+function logScrollBottom(){ const c=$('logConsole'); c.scrollTop=c.scrollHeight; }
+function setLogProgress(p){ if(p!=null && p!=='') $('logProgress').style.width = Math.min(100,+p)+'%'; }
+function openJobLog(id){
+  if(LOG_WS){ try{ LOG_WS.close(); }catch(e){} LOG_WS=null; }
+  LOG_JOB = id;
+  document.querySelectorAll('.logjob').forEach(el=>el.classList.toggle('bg-brand-50', el.dataset.logjob===id));
+  $('logJobId').textContent = id.slice(0,8);
+  $('logStatus').innerHTML=''; $('logProgress').style.width='0%';
+  $('logConsole').innerHTML = '<div class="text-slate-500">กำลังเชื่อมต่อ...</div>';
+  const proto = location.protocol==='https:'?'wss':'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws/jobs/${id}?token=${encodeURIComponent(TOKEN)}`);
+  LOG_WS = ws;
+  ws.onmessage = ev => {
+    const d = JSON.parse(ev.data);
+    if(d.event==='snapshot'){
+      $('logStatus').innerHTML = badge(d.status);
+      $('logLive').classList.toggle('hidden', ['done','failed'].includes(d.status));
+      $('logConsole').innerHTML = d.logs.length ? d.logs.map(logLine).join('') : '<div class="text-slate-500">ยังไม่มี log</div>';
+      const last = d.logs[d.logs.length-1]; if(last) setLogProgress(last.progress);
+      logScrollBottom();
+      return;
     }
-    loadJobs();
+    if(d.event==='log' || d.type){
+      if($('logConsole').querySelector('.text-slate-500')) $('logConsole').innerHTML='';
+      $('logConsole').insertAdjacentHTML('beforeend', logLine(d));
+      setLogProgress(d.progress);
+      if(d.type==='done'){ $('logStatus').innerHTML=badge('done'); $('logLive').classList.add('hidden'); }
+      if(d.type==='err'){ $('logStatus').innerHTML=badge('failed'); $('logLive').classList.add('hidden'); }
+      logScrollBottom();
+    }
   };
-  ws.onclose = () => { box.textContent += '— connection closed —\n'; };
+  ws.onopen = () => $('logLive').classList.remove('hidden');
+  ws.onclose = () => $('logLive').classList.add('hidden');
+  ws.onerror = () => { $('logConsole').insertAdjacentHTML('beforeend','<div class="text-red-400">เชื่อมต่อ log ไม่สำเร็จ</div>'); };
 }
 
-loadJobs();
-setInterval(loadJobs, 5000);
+// ───── boot ─────
+(async function(){
+  if (!TOKEN) return;
+  try {
+    const me = await fetch(API+'/auth/me',{headers:{'Authorization':'Bearer '+TOKEN}}).then(r=>r.ok?r.json():null);
+    if (me && me.is_admin) enterApp(me); else logout();
+  } catch { logout(); }
+})();
 </script>
 </body>
 </html>

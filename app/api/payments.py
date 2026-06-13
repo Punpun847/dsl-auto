@@ -40,15 +40,17 @@ async def payment_info():
     """คืนข้อมูลบัญชีรับเงิน สำหรับ frontend แสดงผล"""
     raw = settings.expected_account
     digits = "".join(c for c in raw if c.isdigit())
-    # format เบอร์โทร 10 หลัก → XXX-XXX-XXXX
+    # format เลขบัญชีธนาคาร 10 หลัก → XXX-X-XXXXX-X (กรุงไทย)
     if len(digits) == 10:
-        display = f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+        display = f"{digits[:3]}-{digits[3:4]}-{digits[4:9]}-{digits[9:]}"
     else:
         display = raw
+    from app.utils.runtime_settings import get_free_mode
     return {
         "account": display,
         "recipient_name": settings.expected_recipient_name or "เก็บชั่วโมงจิตอาสา กยศ ออนไลน์",
-        "method": "PromptPay",
+        "method": "โอนเข้าบัญชี",
+        "free_mode": await get_free_mode(),
     }
 
 

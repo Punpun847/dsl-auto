@@ -35,6 +35,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -51,9 +52,14 @@ for noisy in ("asyncio", "urllib3", "websockets"):
     logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
+_Q_NUM_PREFIX = re.compile(r"^\s*\d{1,3}\s*[.)]\s*")
+
+
 def question_hash(text: str) -> str:
-    """ตรงกับ DSLClient._question_hash"""
-    normalized = " ".join((text or "").split())
+    """ตรงกับ app.utils.answer_cache.question_hash / DSLClient._question_hash
+    normalize whitespace + ตัดเลขข้อนำหน้า (กัน hash เปลี่ยนเมื่อ SET สลับลำดับข้อ)"""
+    stripped = _Q_NUM_PREFIX.sub("", text or "")
+    normalized = " ".join(stripped.split())
     return hashlib.sha1(normalized.encode("utf-8")).hexdigest()[:12]
 
 

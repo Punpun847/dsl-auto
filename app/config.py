@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     dsl_human_answer_timeout: int = 600
 
     class Config:
-        env_file = ".env"
+        env_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
 
     def get_cors_origins(self) -> list[str]:
         if not self.cors_origins or self.cors_origins.strip() == "*":

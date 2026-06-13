@@ -22,9 +22,16 @@ ANSWER_CACHE_FILE = str(_TMP / "exam_answer_cache.json")
 REDIS_KEY = "dsl:answer_cache"
 
 
+import re as _re
+# ตัดเลขข้อนำหน้า "3. " / "8) " / "10." — SET สุ่มสลับลำดับข้อ เลขเปลี่ยนแต่คำถามเดิม
+_Q_NUM_PREFIX = _re.compile(r"^\s*\d{1,3}\s*[.)]\s*")
+
+
 def question_hash(text: str) -> str:
-    """SHA1 12 chars ของ question text (normalize whitespace)"""
-    normalized = " ".join((text or "").split())
+    """SHA1 12 chars ของ question text
+    normalize whitespace + ตัดเลขข้อนำหน้า (กัน hash เปลี่ยนเมื่อ SET สลับลำดับข้อ)"""
+    stripped = _Q_NUM_PREFIX.sub("", text or "")
+    normalized = " ".join(stripped.split())
     return hashlib.sha1(normalized.encode("utf-8")).hexdigest()[:12]
 
 

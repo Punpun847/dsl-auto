@@ -70,8 +70,10 @@ async def create_job(
     # ข้าม celery ping check — ping fail บ่อยถ้า workers ทุกตัวยุ่ง (solo pool)
     # ถ้า celery ตายจริง job จะค้าง pending ใน DB → admin ดู status ได้
 
-    # FREE_MODE — ไม่บังคับสลิป + total_price = 0
-    if settings.free_mode:
+    # FREE_MODE — runtime (แอดมิน toggle ได้สด) → ไม่บังคับสลิป + total_price = 0
+    from app.utils.runtime_settings import get_free_mode
+    free_mode = await get_free_mode()
+    if free_mode:
         total_price = "0"
     elif slip is None:
         raise HTTPException(
@@ -97,7 +99,7 @@ async def create_job(
         slip_path.write_bytes(await slip.read())
 
     # Server-side price verification — ข้ามใน FREE_MODE
-    if not settings.free_mode:
+    if not free_mode:
         try:
             client_price = float(payload.total_price)
         except (TypeError, ValueError):
@@ -153,12 +155,12 @@ async def create_job(
     payment = Payment(
         job_id=job.id,
         slip_path=str(slip_path) if slip_path else "FREE",
-        verified=settings.free_mode,
-        verified_at=datetime.now(timezone.utc) if settings.free_mode else None,
-        amount="0" if settings.free_mode else None,
+        verified=free_mode,
+        verified_at=datetime.now(timezone.utc) if free_mode else None,
+        amount="0" if free_mode else None,
     )
     db.add(payment)
-    if settings.free_mode:
+    if free_mode:
         job.status = JobStatus.queued
     await db.commit()
     await db.refresh(job)
@@ -177,7 +179,7 @@ async def create_job(
     await redis.setex(f"job:{job.id}:pwd", 7200, encrypt_password(payload.pwd))
 
     # FREE_MODE: dispatch worker เลย — ไม่ต้องรอ verify_payment
-    if settings.free_mode:
+    if free_mode:
         from app.worker.tasks import run_automation
         run_automation.delay(str(job.id))
 

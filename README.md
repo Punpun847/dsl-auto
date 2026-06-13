@@ -1,1 +1,0 @@
-# gyso-backend

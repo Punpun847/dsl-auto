@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dsl auto — รันคอร์ส SET อัตโนมัติ</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans Thai', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50:  '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a',
+            },
+            accent: { 400: '#22d3ee', 500: '#06b6d4', 600: '#0891b2' },
+          },
+          boxShadow: {
+            card: '0 10px 40px -12px rgba(37, 99, 235, 0.25)',
+            soft: '0 2px 12px rgba(15, 23, 42, 0.06)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body { font-family: 'Inter', 'Noto Sans Thai', sans-serif; }
+    .bg-aurora {
+      background:
+        radial-gradient(60rem 60rem at 10% -10%, #dbeafe 0%, transparent 50%),
+        radial-gradient(50rem 50rem at 110% 10%, #cffafe 0%, transparent 45%),
+        linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%);
+    }
+    .step-enter { animation: stepIn .35s cubic-bezier(.22,.61,.36,1); }
+    @keyframes stepIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* hide number spinners */
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  </style>
+</head>
+
+<body class="min-h-screen bg-aurora text-slate-800 antialiased">
+
+  <!-- ════════════════════ LOGIN VIEW ════════════════════ -->
+  <div id="loginView" class="min-h-screen grid place-items-center px-4 py-10">
+    <div class="w-full max-w-md">
+
+      <!-- Logo -->
+      <div class="text-center mb-7">
+        <div class="inline-flex items-center gap-2.5">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-600 to-accent-500 grid place-items-center shadow-card">
+            <svg viewBox="0 0 24 24" class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <div class="text-left leading-none">
+            <div class="text-[22px] font-bold tracking-tight text-slate-900">dsl <span class="text-brand-600">auto</span></div>
+            <div class="text-[11px] text-slate-500 mt-1">รันคอร์ส SET อัตโนมัติ</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card -->
+      <div class="bg-white rounded-3xl shadow-card border border-slate-100 p-7 sm:p-8">
+        <!-- Tab switch: login / register -->
+        <div class="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100 mb-6">
+          <button type="button" id="tabLogin" onclick="setAuthMode('login')"
+            class="py-2 rounded-lg text-sm font-semibold transition bg-white text-brand-700 shadow-soft">เข้าสู่ระบบ</button>
+          <button type="button" id="tabRegister" onclick="setAuthMode('register')"
+            class="py-2 rounded-lg text-sm font-semibold transition text-slate-500">สมัครสมาชิก</button>
+        </div>
+
+        <h1 id="authTitle" class="text-xl font-semibold text-slate-900">เข้าสู่ระบบ</h1>
+        <p id="authSubtitle" class="text-sm text-slate-500 mt-1">เข้าสู่บัญชี dsl auto ของคุณเพื่อเริ่มทำงานอัตโนมัติ</p>
+
+        <form id="loginForm" class="mt-6 space-y-5" novalidate>
+          <!-- Email -->
+          <div>
+            <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">อีเมล</label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 6 10-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <input id="email" type="email" inputmode="email" autocomplete="email"
+                placeholder="you@example.com"
+                class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 outline-none transition" />
+            </div>
+            <p id="emailErr" class="hidden mt-1.5 text-[13px] text-red-500"></p>
+          </div>
+
+          <!-- Account password -->
+          <div>
+            <label for="pwd" class="block text-sm font-medium text-slate-700 mb-1.5">รหัสผ่าน</label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg>
+              </span>
+              <input id="pwd" type="password" autocomplete="current-password" placeholder="••••••••"
+                class="w-full pl-11 pr-12 py-3 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 outline-none transition" />
+              <button type="button" id="pwdToggle" aria-label="แสดง/ซ่อนรหัสผ่าน"
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+                <svg id="eyeOpen" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg id="eyeOff" viewBox="0 0 24 24" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3l18 18"/><path d="M10.6 10.6a3 3 0 0 0 4.2 4.2"/><path d="M9.4 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.8 17.8 0 0 1-3.3 4.2M6.6 6.6A17.6 17.6 0 0 0 2 12s3.5 7 10 7a10.7 10.7 0 0 0 2.6-.3"/></svg>
+              </button>
+            </div>
+            <p id="pwdErr" class="hidden mt-1.5 text-[13px] text-red-500"></p>
+          </div>
+
+          <!-- Confirm password (register only) -->
+          <div id="confirmField" class="hidden">
+            <label for="pwd2" class="block text-sm font-medium text-slate-700 mb-1.5">ยืนยันรหัสผ่าน</label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg>
+              </span>
+              <input id="pwd2" type="password" autocomplete="new-password" placeholder="••••••••"
+                class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 outline-none transition" />
+            </div>
+            <p id="pwd2Err" class="hidden mt-1.5 text-[13px] text-red-500"></p>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" id="loginBtn"
+            class="w-full py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white font-semibold shadow-card hover:shadow-lg hover:brightness-105 active:scale-[.99] transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <span id="loginBtnText">เข้าสู่ระบบ</span>
+            <svg id="loginSpinner" class="w-5 h-5 spin hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3a9 9 0 1 0 9 9" stroke-linecap="round"/></svg>
+          </button>
+        </form>
+
+        <div class="mt-5 flex items-center justify-center gap-2 text-[12px] text-slate-400">
+          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          บัญชี dsl auto · เข้ารหัสตลอดเส้นทาง
+        </div>
+      </div>
+
+      <p class="text-center text-[12px] text-slate-400 mt-6">© 2026 dsl auto · บริการช่วยเก็บชั่วโมงกิจกรรมอัตโนมัติ</p>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════ SERVICE VIEW ════════════════════ -->
+  <div id="serviceView" class="hidden min-h-screen">
+
+    <!-- Top bar -->
+    <header class="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-slate-100">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-600 to-accent-500 grid place-items-center">
+            <svg viewBox="0 0 24 24" class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <div class="text-[17px] font-bold tracking-tight text-slate-900">dsl <span class="text-brand-600">auto</span></div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="hidden sm:flex items-center gap-2 text-sm text-slate-500">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/></svg>
+            <span id="userEmail">—</span>
+          </div>
+          <a id="adminLink" href="/admin-panel" class="hidden text-sm font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/></svg>
+            แผงแอดมิน
+          </a>
+          <button onclick="logout()" class="text-sm font-medium text-slate-500 hover:text-red-500 transition flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            ออก
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8 lg:py-10">
+      <div class="mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900">ทำรายการอัตโนมัติ</h1>
+        <p class="text-slate-500 mt-1.5">ทำตาม 3 ขั้นตอน — ระบบจะรันคอร์สให้อัตโนมัติภายในไม่กี่นาที</p>
+      </div>
+
+      <!-- Stepper -->
+      <div class="mb-8">
+        <div class="flex items-center">
+          <!-- step 1 -->
+          <div class="flex items-center gap-3 shrink-0">
+            <div id="dot1" class="w-10 h-10 rounded-full grid place-items-center font-semibold text-sm border-2 transition-all"></div>
+            <div class="hidden sm:block">
+              <div class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">ขั้นที่ 1</div>
+              <div id="lbl1" class="text-sm font-medium text-slate-700">ตรวจสอบข้อมูล</div>
+            </div>
+          </div>
+          <div id="bar1" class="flex-1 h-0.5 mx-2 sm:mx-4 bg-slate-200 rounded transition-all"></div>
+          <!-- step 2 -->
+          <div class="flex items-center gap-3 shrink-0">
+            <div id="dot2" class="w-10 h-10 rounded-full grid place-items-center font-semibold text-sm border-2 transition-all"></div>
+            <div class="hidden sm:block">
+              <div class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">ขั้นที่ 2</div>
+              <div id="lbl2" class="text-sm font-medium text-slate-700">เลือกชั่วโมง</div>
+            </div>
+          </div>
+          <div id="bar2" class="flex-1 h-0.5 mx-2 sm:mx-4 bg-slate-200 rounded transition-all"></div>
+          <!-- step 3 -->
+          <div class="flex items-center gap-3 shrink-0">
+            <div id="dot3" class="w-10 h-10 rounded-full grid place-items-center font-semibold text-sm border-2 transition-all"></div>
+            <div class="hidden sm:block">
+              <div class="text-[11px] uppercase tracking-wider text-slate-400 font-medium">ขั้นที่ 3</div>
+              <div id="lbl3" class="text-sm font-medium text-slate-700">ชำระเงิน</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
+        <!-- LEFT: step panels -->
+        <div class="bg-white rounded-3xl shadow-soft border border-slate-100 p-6 sm:p-8 min-h-[360px]">
+
+          <!-- ── STEP 1 ── -->
+          <section id="step1" class="step-enter">
+            <h2 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
+              <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+              เชื่อมต่อบัญชี กยศ.
+            </h2>
+            <p class="text-sm text-slate-500 mt-1">กรอกข้อมูลที่ใช้เข้าสู่ระบบ DSL ของ กยศ. เพื่อให้ระบบทำรายการแทนคุณ</p>
+
+            <form id="dslForm" class="mt-6 space-y-5" novalidate>
+              <!-- NID -->
+              <div>
+                <label for="nid" class="block text-sm font-medium text-slate-700 mb-1.5">เลขบัตรประจำตัวประชาชน</label>
+                <div class="relative">
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2.2"/><path d="M13 10h6M13 14h4" stroke-linecap="round"/></svg>
+                  </span>
+                  <input id="nid" type="text" inputmode="numeric" autocomplete="off"
+                    placeholder="X-XXXX-XXXXX-XX-X"
+                    class="w-full pl-11 pr-16 py-3 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 tracking-wide focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 outline-none transition" />
+                  <span id="nidCount" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 tabular-nums">0/13</span>
+                </div>
+                <p id="nidErr" class="hidden mt-1.5 text-[13px] text-red-500"></p>
+              </div>
+
+              <!-- DSL password -->
+              <div>
+                <label for="dslPwd" class="block text-sm font-medium text-slate-700 mb-1.5">รหัสผ่านระบบ กยศ. (DSL)</label>
+                <div class="relative">
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg>
+                  </span>
+                  <input id="dslPwd" type="password" autocomplete="off" placeholder="••••••••"
+                    class="w-full pl-11 pr-12 py-3 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 outline-none transition" />
+                  <button type="button" id="dslPwdToggle" aria-label="แสดง/ซ่อนรหัสผ่าน"
+                    class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+                    <svg id="dslEyeOpen" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg id="dslEyeOff" viewBox="0 0 24 24" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3l18 18"/><path d="M10.6 10.6a3 3 0 0 0 4.2 4.2"/><path d="M9.4 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.8 17.8 0 0 1-3.3 4.2M6.6 6.6A17.6 17.6 0 0 0 2 12s3.5 7 10 7a10.7 10.7 0 0 0 2.6-.3"/></svg>
+                  </button>
+                </div>
+                <p id="dslPwdErr" class="hidden mt-1.5 text-[13px] text-red-500"></p>
+              </div>
+
+              <!-- connection status (hidden until submit) -->
+              <div id="connStatus" class="hidden items-center gap-3 px-4 py-3.5 rounded-xl bg-brand-50 border border-brand-100 text-brand-700">
+                <svg class="w-5 h-5 spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3a9 9 0 1 0 9 9" stroke-linecap="round"/></svg>
+                <span class="text-sm font-medium">กำลังเชื่อมต่อระบบ กยศ. …</span>
+              </div>
+
+              <div class="flex justify-end">
+                <button type="submit" id="next1"
+                  class="px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 active:scale-[.99] transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+                  <span id="next1Text">เชื่อมต่อและตรวจสอบ</span>
+                  <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- ── STEP 2 ── -->
+          <section id="step2" class="hidden">
+            <h2 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
+              <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              เลือกชั่วโมงกิจกรรม
+            </h2>
+
+            <!-- hours remaining from กยศ -->
+            <div class="mt-6 flex items-center justify-between rounded-2xl border border-brand-100 bg-brand-50 px-5 py-4">
+              <div class="flex items-center gap-2 text-sm font-medium text-brand-700">
+                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                ชม.ที่เหลือทำได้
+              </div>
+              <div><span id="hrRemaining" class="text-2xl font-bold text-brand-700 tabular-nums">—</span> <span class="text-sm text-brand-600/70">ชม.</span></div>
+            </div>
+
+            <label for="hrInput" class="block text-sm font-medium text-slate-700 mt-6 mb-2">
+              กรอกจำนวนชั่วโมงที่จะให้ระบบทำ <span class="text-slate-400 font-normal">(สูงสุด <span id="hrMax" class="tabular-nums">—</span> ชม.)</span>
+            </label>
+            <div id="hrEmpty" class="hidden rounded-2xl border border-emerald-100 bg-emerald-50 p-5 text-center text-emerald-700 font-medium">ชั่วโมงกิจกรรมครบแล้ว — ไม่มีรายการให้ทำ 🎉</div>
+            <div id="hrControl">
+              <div class="flex items-stretch gap-2 max-w-xs">
+                <button type="button" id="hrMinus" class="w-12 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 text-xl font-semibold hover:bg-slate-100 active:scale-95 transition disabled:opacity-40">−</button>
+                <input id="hrInput" type="number" inputmode="numeric" min="1" placeholder="0"
+                  class="flex-1 w-full text-center text-2xl font-bold text-slate-900 tabular-nums py-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 outline-none transition" />
+                <button type="button" id="hrPlus" class="w-12 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 text-xl font-semibold hover:bg-slate-100 active:scale-95 transition disabled:opacity-40">+</button>
+              </div>
+              <p id="hrErr" class="hidden mt-1.5 text-[13px] text-red-500"></p>
+
+              <div class="mt-4 flex items-center justify-between px-4 py-3.5 rounded-xl bg-brand-50 border border-brand-100">
+                <span class="text-sm text-brand-700">ราคารวม <span class="text-brand-600/70">(฿3/ชั่วโมง)</span></span>
+                <span id="hrPrice" class="text-xl font-bold text-brand-700 tabular-nums">฿0</span>
+              </div>
+            </div>
+
+            <div class="mt-7 flex justify-between">
+              <button onclick="goStep(1)" class="px-5 py-3 rounded-xl text-slate-600 font-medium hover:bg-slate-100 transition flex items-center gap-2">
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+                ย้อนกลับ
+              </button>
+              <button id="next2" onclick="goStep(3)" disabled
+                class="px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 active:scale-[.99] transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+                ถัดไป
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+          </section>
+
+          <!-- ── STEP 3 ── -->
+          <section id="step3" class="hidden">
+            <h2 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
+              <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+              ชำระเงิน
+            </h2>
+            <p class="text-sm text-slate-500 mt-1">ตรวจสอบยอดและชำระเงินเพื่อเริ่มงานอัตโนมัติ</p>
+
+            <!-- summary box -->
+            <div class="mt-6 rounded-2xl border border-slate-100 overflow-hidden">
+              <div class="flex items-center justify-between px-5 py-4 bg-slate-50">
+                <span class="text-sm text-slate-500">ชั่วโมงที่จะทำ</span>
+                <span id="payPkg" class="text-sm font-semibold text-slate-800">—</span>
+              </div>
+              <div class="flex items-center justify-between px-5 py-4 border-t border-slate-100">
+                <span class="text-sm text-slate-500">คงเหลือหลังทำรายการ</span>
+                <span id="payHours" class="text-sm font-medium text-slate-800">—</span>
+              </div>
+              <div class="flex items-center justify-between px-5 py-4 border-t border-slate-100 bg-brand-50/40">
+                <span class="text-base font-semibold text-slate-700">ยอดชำระทั้งหมด</span>
+                <span id="payTotal" class="text-2xl font-bold text-brand-700 tabular-nums">฿0</span>
+              </div>
+            </div>
+
+            <!-- pay action -->
+            <div id="payAction" class="mt-6">
+              <button id="payBtn" onclick="confirmPay()"
+                class="w-full py-4 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white font-semibold text-[15px] shadow-card hover:brightness-105 active:scale-[.99] transition flex items-center justify-center gap-2">
+                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                ยืนยันและชำระเงิน
+              </button>
+              <button onclick="goStep(2)" class="mt-3 w-full py-2.5 text-sm text-slate-500 hover:text-slate-700 font-medium transition">
+                ← ย้อนกลับไปเลือกเวลา
+              </button>
+            </div>
+
+            <!-- transfer + slip upload (hidden until confirm) -->
+            <div id="qrBox" class="hidden mt-6">
+              <div class="rounded-2xl border-2 border-brand-100 bg-gradient-to-b from-brand-50/50 to-white p-6">
+                <div class="flex items-center justify-center gap-2 text-brand-700 font-semibold">
+                  <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10h18M3 6h18v12H3zM7 15h4"/></svg>
+                  โอนเงินเข้าบัญชีด้านล่าง
+                </div>
+                <div class="mt-1 text-center text-xs text-slate-500">โอนแล้วอัปโหลดสลิป ระบบตรวจสอบอัตโนมัติ</div>
+
+                <div class="mt-5 max-w-xs mx-auto space-y-2 text-sm">
+                  <div class="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-slate-50">
+                    <span class="text-slate-500">ธนาคาร</span>
+                    <span id="payBankName" class="font-medium text-slate-800">กรุงไทย</span>
+                  </div>
+                  <div class="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-slate-50">
+                    <span class="text-slate-500">เลขบัญชี</span>
+                    <span class="flex items-center gap-2">
+                      <span id="payAccount" class="font-semibold text-slate-900 tabular-nums">—</span>
+                      <button type="button" onclick="copyAccount(this)" class="text-xs px-2 py-1 rounded-md bg-brand-100 text-brand-700 hover:bg-brand-200 transition">คัดลอก</button>
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-slate-50">
+                    <span class="text-slate-500">ชื่อบัญชี</span>
+                    <span id="payRecipient" class="font-medium text-slate-800">—</span>
+                  </div>
+                  <div class="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-brand-50">
+                    <span class="text-brand-700">ยอดที่ต้องโอน</span>
+                    <span id="qrAmount" class="font-bold text-brand-700 tabular-nums">฿0</span>
+                  </div>
+                </div>
+
+                <!-- slip upload -->
+                <div class="mt-5">
+                  <label for="slipInput" class="block cursor-pointer rounded-xl border-2 border-dashed border-slate-300 hover:border-brand-400 bg-white px-4 py-5 text-center transition">
+                    <img id="slipPreview" class="hidden mx-auto mb-3 max-h-40 rounded-lg shadow-soft" alt="สลิป" />
+                    <div id="slipPrompt" class="flex flex-col items-center gap-1.5 text-slate-500">
+                      <svg viewBox="0 0 24 24" class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>
+                      <span class="text-sm font-medium">แตะเพื่ออัปโหลดสลิปการโอน</span>
+                      <span class="text-xs text-slate-400">รองรับไฟล์รูปภาพ (JPG, PNG)</span>
+                    </div>
+                  </label>
+                  <input id="slipInput" type="file" accept="image/*" class="hidden" onchange="onSlipPick(this)" />
+                </div>
+
+                <!-- verify errors -->
+                <div id="payErrors" class="hidden mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <div class="font-semibold mb-1">ตรวจสอบสลิปไม่ผ่าน</div>
+                  <ul id="payErrorList" class="list-disc list-inside space-y-0.5 text-[13px]"></ul>
+                </div>
+
+                <button id="confirmSlipBtn" onclick="paid(this)" class="mt-5 w-full py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-[.99] transition disabled:opacity-50 disabled:cursor-not-allowed">
+                  ยืนยันการชำระเงิน
+                </button>
+              </div>
+
+              <button onclick="cancelPay()" class="mt-3 w-full py-2.5 text-sm text-slate-500 hover:text-slate-700 font-medium transition">
+                ← กลับไปเลือกเวลา
+              </button>
+            </div>
+
+            <!-- success -->
+            <div id="successBox" class="hidden mt-6 py-6">
+              <div class="text-center">
+                <div class="w-16 h-16 mx-auto rounded-full bg-emerald-100 grid place-items-center">
+                  <svg viewBox="0 0 24 24" class="w-9 h-9 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <h3 class="mt-4 text-xl font-bold text-slate-900">เริ่มงานแล้ว!</h3>
+                <p class="mt-1.5 text-slate-500 text-sm max-w-sm mx-auto">ระบบกำลังรันคอร์สให้อัตโนมัติ — ดูความคืบหน้าสดด้านล่าง คุณปิดหน้านี้ได้ เราทำให้จนเสร็จ</p>
+              </div>
+
+              <!-- live progress -->
+              <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-slate-100 border-b border-slate-200">
+                  <span class="text-xs font-semibold text-slate-600">บันทึกการทำงานสด</span>
+                  <span id="jobStatus" class="text-xs font-medium text-brand-600">กำลังเชื่อมต่อ…</span>
+                </div>
+                <div class="h-2 bg-slate-200"><div id="jobBar" class="h-2 bg-brand-500 transition-all" style="width:0%"></div></div>
+                <div id="jobLog" class="max-h-56 overflow-y-auto px-4 py-3 space-y-1.5 text-[12.5px] font-mono text-slate-600 text-left"></div>
+              </div>
+
+              <div class="text-center">
+                <button onclick="restart()" class="mt-6 px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition">ทำรายการใหม่</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- RIGHT: sticky summary -->
+        <aside class="lg:sticky lg:top-24 rounded-3xl bg-slate-900 text-white p-6 shadow-card">
+          <div class="text-[11px] uppercase tracking-wider text-white/50 font-medium">สรุปคำสั่ง</div>
+          <h3 class="mt-1.5 text-lg font-semibold">รันคอร์สอัตโนมัติ</h3>
+
+          <div class="mt-5 space-y-3 text-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-white/60">ชั่วโมงที่เลือก</span>
+              <span id="sumHours" class="font-medium">—</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-white/60">คงเหลือหลังทำ</span>
+              <span id="sumPkg" class="font-medium">—</span>
+            </div>
+          </div>
+
+          <div class="mt-5 pt-4 border-t border-white/10 flex items-baseline justify-between">
+            <span class="text-white/70 text-sm">ยอดรวม</span>
+            <span id="sumTotal" class="text-3xl font-bold tabular-nums">฿0</span>
+          </div>
+
+          <div class="mt-6 space-y-2.5 text-[12.5px] text-white/55">
+            <div class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> ไม่บันทึกรหัสผ่าน</div>
+            <div class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> เริ่มทำงานภายใน 2 นาที</div>
+            <div class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg> คืนเงินถ้าระบบทำไม่สำเร็จ</div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+
+  <script>
+    // ───────── config ─────────
+    const RATE_PER_HOUR = 3; // บาท/ชั่วโมง
+    const API_BASE = window.location.origin; // backend (เสิร์ฟหน้านี้จาก FastAPI)
+
+    const state = { email: '', nid: '', pwd: '', step: 1, sel: null, paid: false, authMode: 'login',
+                    remaining: 0, courses: [], token: '', jobId: null, slipFile: null };
+    const $ = (id) => document.getElementById(id);
+
+    // ───────── auth helpers ─────────
+    function authHeaders(extra = {}) {
+      return state.token ? { ...extra, Authorization: 'Bearer ' + state.token } : extra;
+    }
+
+    // ───────── NID helpers ─────────
+    function formatNid(digits) {
+      // 1-2345-67890-12-3  => groups 1,4,5,2,1
+      const d = digits.slice(0, 13);
+      const parts = [d.slice(0,1), d.slice(1,5), d.slice(5,10), d.slice(10,12), d.slice(12,13)];
+      return parts.filter(Boolean).join('-');
+    }
+    function validThaiNid(id) {
+      if (!/^\d{13}$/.test(id)) return false;
+      let sum = 0;
+      for (let i = 0; i < 12; i++) sum += parseInt(id[i], 10) * (13 - i);
+      return (11 - (sum % 11)) % 10 === parseInt(id[12], 10);
+    }
+    function showErr(id, msg) {
+      const el = $(id); el.textContent = msg; el.classList.remove('hidden');
+    }
+
+    // ───────── account auth (dsl auto) ─────────
+    function setAuthMode(mode) {
+      state.authMode = mode;
+      const login = mode === 'login';
+      $('tabLogin').className = 'py-2 rounded-lg text-sm font-semibold transition ' +
+        (login ? 'bg-white text-brand-700 shadow-soft' : 'text-slate-500');
+      $('tabRegister').className = 'py-2 rounded-lg text-sm font-semibold transition ' +
+        (!login ? 'bg-white text-brand-700 shadow-soft' : 'text-slate-500');
+      $('authTitle').textContent = login ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
+      $('authSubtitle').textContent = login
+        ? 'เข้าสู่บัญชี dsl auto ของคุณเพื่อเริ่มทำงานอัตโนมัติ'
+        : 'สร้างบัญชี dsl auto ใหม่ — ใช้อีเมลและรหัสผ่าน';
+      $('confirmField').classList.toggle('hidden', login);
+      $('loginBtnText').textContent = login ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
+      $('pwd').setAttribute('autocomplete', login ? 'current-password' : 'new-password');
+      ['emailErr','pwdErr','pwd2Err'].forEach((id) => $(id).classList.add('hidden'));
+    }
+
+    $('pwdToggle').addEventListener('click', () => {
+      const p = $('pwd');
+      const show = p.type === 'password';
+      p.type = show ? 'text' : 'password';
+      $('eyeOpen').classList.toggle('hidden', show);
+      $('eyeOff').classList.toggle('hidden', !show);
+    });
+
+    $('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = $('email').value.trim();
+      const pwd = $('pwd').value;
+      const register = state.authMode === 'register';
+      let ok = true;
+
+      ['emailErr','pwdErr','pwd2Err'].forEach((id) => $(id).classList.add('hidden'));
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showErr('emailErr', 'กรุณากรอกอีเมลให้ถูกต้อง'); ok = false;
+      }
+      if (pwd.length < 8) { showErr('pwdErr', 'รหัสผ่านอย่างน้อย 8 ตัวอักษร'); ok = false; }
+      if (register && $('pwd2').value !== pwd) {
+        showErr('pwd2Err', 'รหัสผ่านไม่ตรงกัน'); ok = false;
+      }
+      if (!ok) return;
+
+      $('loginBtn').disabled = true;
+      $('loginBtnText').textContent = register ? 'กำลังสมัคร…' : 'กำลังเข้าสู่ระบบ…';
+      $('loginSpinner').classList.remove('hidden');
+
+      try {
+        if (register) {
+          const r = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: pwd }),
+          });
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            throw new Error(d.detail || 'สมัครไม่สำเร็จ');
+          }
+        }
+        // login (OAuth2 password flow — form-encoded)
+        const body = new URLSearchParams({ username: email, password: pwd });
+        const lr = await fetch(`${API_BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        });
+        if (!lr.ok) {
+          const d = await lr.json().catch(() => ({}));
+          throw new Error(d.detail || 'เข้าสู่ระบบไม่สำเร็จ');
+        }
+        const { access_token } = await lr.json();
+        state.token = access_token;
+        state.email = email;
+        // เช็คว่าเป็นแอดมินไหม → ถ้าใช่ แชร์ token ให้หน้าแอดมิน (ไม่ต้อง login ซ้ำ) + โชว์ปุ่ม
+        try {
+          const me = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: 'Bearer ' + access_token } }).then(r => r.json());
+          state.isAdmin = !!me.is_admin;
+          if (me.is_admin) localStorage.setItem('dsl_admin_token', access_token);
+        } catch { state.isAdmin = false; }
+        enterService();
+      } catch (err) {
+        showErr(register ? 'emailErr' : 'pwdErr', err.message || 'เกิดข้อผิดพลาด');
+      } finally {
+        $('loginBtn').disabled = false;
+        $('loginBtnText').textContent = register ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ';
+        $('loginSpinner').classList.add('hidden');
+      }
+    });
+
+    function enterService() {
+      $('loginView').classList.add('hidden');
+      $('serviceView').classList.remove('hidden');
+      window.scrollTo(0, 0);
+      $('userEmail').textContent = state.email;
+      $('adminLink').classList.toggle('hidden', !state.isAdmin);
+      goStep(1);
+    }
+
+    // ───────── DSL credential connect (Step 1) ─────────
+    let nidDigits = '';
+    $('nid').addEventListener('input', (e) => {
+      nidDigits = e.target.value.replace(/\D/g, '').slice(0, 13);
+      e.target.value = formatNid(nidDigits);
+      $('nidCount').textContent = nidDigits.length + '/13';
+      $('nidErr').classList.add('hidden');
+    });
+
+    $('dslPwdToggle').addEventListener('click', () => {
+      const p = $('dslPwd');
+      const show = p.type === 'password';
+      p.type = show ? 'text' : 'password';
+      $('dslEyeOpen').classList.toggle('hidden', show);
+      $('dslEyeOff').classList.toggle('hidden', !show);
+    });
+
+    function setConn(kind, msg) {
+      const conn = $('connStatus');
+      conn.classList.remove('hidden');
+      const palette = {
+        loading: 'bg-brand-50 border-brand-100 text-brand-700',
+        ok: 'bg-emerald-50 border-emerald-100 text-emerald-700',
+        err: 'bg-red-50 border-red-100 text-red-600',
+      }[kind];
+      conn.className = 'mt-1 flex items-center gap-3 px-4 py-3.5 rounded-xl border ' + palette;
+      const icon = kind === 'loading'
+        ? '<svg class="w-5 h-5 spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3a9 9 0 1 0 9 9" stroke-linecap="round"/></svg>'
+        : kind === 'ok'
+        ? '<svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'
+        : '<svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>';
+      conn.innerHTML = icon + '<span class="text-sm font-medium">' + msg + '</span>';
+    }
+
+    $('dslForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pwd = $('dslPwd').value;
+      let ok = true;
+      $('nidErr').classList.add('hidden');
+      $('dslPwdErr').classList.add('hidden');
+
+      if (nidDigits.length !== 13) {
+        showErr('nidErr', 'กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก'); ok = false;
+      } else if (!validThaiNid(nidDigits)) {
+        showErr('nidErr', 'เลขบัตรประชาชนไม่ถูกต้อง'); ok = false;
+      }
+      if (pwd.length < 6) { showErr('dslPwdErr', 'รหัสผ่านอย่างน้อย 6 ตัวอักษร'); ok = false; }
+      if (!ok) return;
+
+      state.nid = nidDigits;
+      state.pwd = pwd;
+
+      $('next1').disabled = true;
+      $('next1Text').textContent = 'กำลังเชื่อมต่อ…';
+      setConn('loading', 'กำลังเชื่อมต่อระบบ กยศ. และดึงชั่วโมงกิจกรรม…');
+
+      try {
+        const res = await fetch(`${API_BASE}/courses/fetch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nid: state.nid, pwd: state.pwd }),
+        });
+
+        if (res.status === 404) {
+          // ทำครบทุกหลักสูตรแล้ว
+          state.courses = [];
+          state.remaining = 0;
+          state.sel = null;
+          setConn('ok', 'เชื่อมต่อสำเร็จ — คุณทำครบทุกหลักสูตรแล้ว');
+          renderHoursStatus();
+          setupHourInput();
+          setTimeout(() => goStep(2), 600);
+          return;
+        }
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.detail || 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่');
+        }
+
+        const courses = await res.json();
+        state.courses = courses;
+        state.remaining = Math.round(courses.reduce((s, c) => s + (c.hours || 0), 0));
+        state.sel = null;
+
+        setConn('ok', `เชื่อมต่อสำเร็จ — เหลือ ${state.remaining} ชม. ที่ยังต้องทำ`);
+        renderHoursStatus();
+        setupHourInput();
+        $('next2').disabled = true;
+        setTimeout(() => goStep(2), 600);
+      } catch (err) {
+        setConn('err', err.message || 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่');
+        $('next1').disabled = false;
+        $('next1Text').textContent = 'เชื่อมต่อและตรวจสอบ';
+      }
+    });
+
+    function renderHoursStatus() {
+      $('hrRemaining').textContent = state.remaining;
+    }
+
+    function logout() {
+      if (!confirm('ออกจากระบบ?')) return;
+      localStorage.removeItem('dsl_admin_token');
+      location.reload();
+    }
+
+    // ───────── hour input (ผู้ใช้กำหนดเอง ไม่เกินที่เหลือ) ─────────
+    function setupHourInput() {
+      const empty = state.remaining <= 0;
+      $('hrEmpty').classList.toggle('hidden', !empty);
+      $('hrControl').classList.toggle('hidden', empty);
+      $('hrMax').textContent = state.remaining;
+      const input = $('hrInput');
+      input.max = state.remaining;
+      input.value = '';
+      $('hrPrice').textContent = '฿0';
+      $('hrErr').classList.add('hidden');
+    }
+
+    function applyHours(h) {
+      const input = $('hrInput');
+      $('hrErr').classList.add('hidden');
+      if (!Number.isFinite(h) || h < 1) {
+        state.sel = null;
+        $('hrPrice').textContent = '฿0';
+        $('next2').disabled = true;
+        return;
+      }
+      if (h > state.remaining) {
+        h = state.remaining;
+        input.value = h;
+        showErr('hrErr', 'ทำได้ไม่เกิน ' + state.remaining + ' ชม. ที่เหลือ');
+      }
+      state.sel = { hours: h, price: h * RATE_PER_HOUR };
+      $('hrPrice').textContent = '฿' + state.sel.price;
+      $('next2').disabled = false;
+      updateSummary();
+    }
+
+    function bindHourInput() {
+      const input = $('hrInput');
+      input.addEventListener('input', () => {
+        const raw = input.value.replace(/\D/g, '');
+        input.value = raw;
+        applyHours(parseInt(raw, 10));
+      });
+      $('hrMinus').addEventListener('click', () => {
+        const cur = parseInt(input.value, 10) || 0;
+        input.value = Math.max(cur - 1, 1);
+        applyHours(parseInt(input.value, 10));
+      });
+      $('hrPlus').addEventListener('click', () => {
+        const cur = parseInt(input.value, 10) || 0;
+        input.value = Math.min(cur + 1, state.remaining);
+        applyHours(parseInt(input.value, 10));
+      });
+    }
+    bindHourInput();
+
+    function updateSummary() {
+      const s = state.sel;
+      if (!s) return;
+      const left = state.remaining - s.hours;
+      $('sumHours').textContent = s.hours + ' ชม.';
+      $('sumPkg').textContent = left + ' ชม.';
+      $('sumTotal').textContent = '฿' + s.price;
+      $('payPkg').textContent = s.hours + ' ชม.';
+      $('payHours').textContent = left + ' ชม.';
+      $('payTotal').textContent = '฿' + s.price;
+      $('qrAmount').textContent = '฿' + s.price;
+    }
+
+    // ───────── stepper / nav ─────────
+    function goStep(n) {
+      state.step = n;
+      [1, 2, 3].forEach((i) => $('step' + i).classList.toggle('hidden', i !== n));
+      if (n === 3) {
+        $('successBox').classList.add('hidden');
+        $('qrBox').classList.add('hidden');
+        $('payAction').classList.remove('hidden');
+        resetSlip();
+      }
+      const active = $('step' + n);
+      active.classList.remove('step-enter'); void active.offsetWidth; active.classList.add('step-enter');
+      renderStepper();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderStepper() {
+      [1, 2, 3].forEach((i) => {
+        const dot = $('dot' + i);
+        const done = i < state.step;
+        const active = i === state.step;
+        dot.className = 'w-10 h-10 rounded-full grid place-items-center font-semibold text-sm border-2 transition-all ' +
+          (done ? 'bg-brand-600 border-brand-600 text-white'
+               : active ? 'bg-white border-brand-600 text-brand-600 ring-4 ring-brand-500/15'
+                        : 'bg-white border-slate-200 text-slate-300');
+        dot.innerHTML = done
+          ? '<svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'
+          : i;
+        $('lbl' + i).className = 'text-sm font-medium ' + (active || done ? 'text-slate-800' : 'text-slate-400');
+      });
+      $('bar1').className = 'flex-1 h-0.5 mx-2 sm:mx-4 rounded transition-all ' + (state.step > 1 ? 'bg-brand-600' : 'bg-slate-200');
+      $('bar2').className = 'flex-1 h-0.5 mx-2 sm:mx-4 rounded transition-all ' + (state.step > 2 ? 'bg-brand-600' : 'bg-slate-200');
+    }
+
+    // ───────── payment ─────────
+    async function confirmPay() {
+      $('payAction').classList.add('hidden');
+      $('qrBox').classList.remove('hidden');
+      resetSlip();
+      $('qrAmount').textContent = '฿' + (state.sel ? state.sel.price : 0);
+      try {
+        const r = await fetch(`${API_BASE}/payments/info`, { headers: authHeaders() });
+        if (r.ok) {
+          const info = await r.json();
+          if (info.account) $('payAccount').textContent = info.account;
+          if (info.recipient_name) $('payRecipient').textContent = info.recipient_name;
+          if (info.bank) $('payBankName').textContent = info.bank;
+        }
+      } catch (e) { /* show fallbacks already in markup */ }
+      $('qrBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function cancelPay() {
+      goStep(2);
+    }
+    function resetSlip() {
+      state.slipFile = null;
+      $('slipInput').value = '';
+      $('slipPreview').classList.add('hidden');
+      $('slipPreview').removeAttribute('src');
+      $('slipPrompt').classList.remove('hidden');
+      $('payErrors').classList.add('hidden');
+      $('payErrorList').innerHTML = '';
+      $('confirmSlipBtn').disabled = true;
+    }
+    function onSlipPick(input) {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      state.slipFile = f;
+      const url = URL.createObjectURL(f);
+      $('slipPreview').src = url;
+      $('slipPreview').classList.remove('hidden');
+      $('slipPrompt').classList.add('hidden');
+      $('payErrors').classList.add('hidden');
+      $('confirmSlipBtn').disabled = false;
+    }
+    function copyAccount(btn) {
+      const acc = ($('payAccount').textContent || '').replace(/\D/g, '');
+      if (!acc) return;
+      navigator.clipboard?.writeText(acc).then(() => {
+        const t = btn.textContent; btn.textContent = 'คัดลอกแล้ว';
+        setTimeout(() => { btn.textContent = t; }, 1500);
+      });
+    }
+    function showPayErrors(errors) {
+      const list = $('payErrorList');
+      list.innerHTML = '';
+      (errors && errors.length ? errors : ['ตรวจสอบสลิปไม่สำเร็จ ลองใหม่อีกครั้ง']).forEach((e) => {
+        const li = document.createElement('li');
+        li.textContent = e;
+        list.appendChild(li);
+      });
+      $('payErrors').classList.remove('hidden');
+    }
+    // เลือก course ids จากที่ดึงมา ให้รวมชั่วโมงพอดี/ใกล้เคียงกับที่ผู้ใช้เลือก
+    function selectCoursesForHours(hours) {
+      const ids = [];
+      let acc = 0;
+      for (const c of state.courses) {
+        if (acc >= hours) break;
+        ids.push(c.id);
+        acc += c.hours || 0;
+      }
+      return { ids, hours: acc };
+    }
+
+    async function paid(btn) {
+      if (!state.slipFile) { showPayErrors(['กรุณาอัปโหลดสลิปการโอนก่อน']); return; }
+
+      const picked = selectCoursesForHours(state.sel ? state.sel.hours : 0);
+      if (!picked.ids.length) { showPayErrors(['ไม่มีหลักสูตรให้ทำ']); return; }
+
+      if (btn) { btn.disabled = true; btn.textContent = 'กำลังตรวจสอบสลิป…'; }
+      $('payErrors').classList.add('hidden');
+
+      const fd = new FormData();
+      fd.append('nid', state.nid);
+      fd.append('pwd', state.pwd);
+      fd.append('courses', JSON.stringify(picked.ids));
+      fd.append('total_price', String(state.sel ? state.sel.price : 0));
+      fd.append('total_hours', String(picked.hours));
+      fd.append('slip', state.slipFile);
+
+      const resetBtn = () => { if (btn) { btn.disabled = false; btn.textContent = 'ยืนยันการชำระเงิน'; } };
+
+      try {
+        // 1) create pending job + unverified payment (with slip)
+        const r = await fetch(`${API_BASE}/jobs/`, { method: 'POST', headers: authHeaders(), body: fd });
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          throw new Error(typeof d.detail === 'string' ? d.detail : 'สร้างงานไม่สำเร็จ');
+        }
+        const job = await r.json();
+        state.jobId = job.id;
+
+        // 2) verify slip via SlipOK — only on success does the worker dispatch
+        const vr = await fetch(`${API_BASE}/payments/${job.id}/verify`, { method: 'POST', headers: authHeaders() });
+        if (!vr.ok) {
+          const vd = await vr.json().catch(() => ({}));
+          const det = vd.detail;
+          const errs = (det && det.errors) ? det.errors : (typeof det === 'string' ? [det] : null);
+          showPayErrors(errs);
+          resetBtn();
+          return;
+        }
+
+        state.paid = true;
+        $('qrBox').classList.add('hidden');
+        $('successBox').classList.remove('hidden');
+        $('jobLog').innerHTML = '';
+        streamJob(job.id);
+      } catch (err) {
+        showPayErrors([err.message || 'เกิดข้อผิดพลาด']);
+        resetBtn();
+      }
+    }
+
+    function appendLog(type, message, progress) {
+      const colors = { ok: 'text-emerald-600', err: 'text-red-500', done: 'text-emerald-600', sys: 'text-slate-500' };
+      const row = document.createElement('div');
+      row.className = colors[type] || 'text-slate-600';
+      row.textContent = (type === 'err' ? '✖ ' : type === 'done' || type === 'ok' ? '✓ ' : '• ') + message;
+      const box = $('jobLog');
+      box.appendChild(row);
+      box.scrollTop = box.scrollHeight;
+      if (progress != null && progress !== '') $('jobBar').style.width = Math.min(100, Number(progress)) + '%';
+    }
+
+    function streamJob(jobId) {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      const url = `${proto}://${location.host}/ws/jobs/${jobId}` + (state.token ? `?token=${state.token}` : '');
+      const ws = new WebSocket(url);
+      ws.onmessage = (ev) => {
+        const d = JSON.parse(ev.data);
+        if (d.event === 'snapshot') {
+          $('jobStatus').textContent = d.status;
+          (d.logs || []).forEach((l) => appendLog(l.type, l.message, l.progress));
+          return;
+        }
+        appendLog(d.type, d.message, d.progress);
+        if (d.type === 'done') { $('jobStatus').textContent = 'เสร็จสมบูรณ์'; $('jobStatus').className = 'text-xs font-medium text-emerald-600'; $('jobBar').style.width = '100%'; ws.close(); }
+        else if (d.type === 'err') { $('jobStatus').textContent = 'ล้มเหลว'; $('jobStatus').className = 'text-xs font-medium text-red-500'; ws.close(); }
+        else { $('jobStatus').textContent = 'กำลังทำงาน…'; }
+      };
+      ws.onerror = () => { $('jobStatus').textContent = 'การเชื่อมต่อขัดข้อง'; };
+    }
+
+    function restart() {
+      $('successBox').classList.add('hidden');
+      $('payAction').classList.remove('hidden');
+      resetSlip();
+      state.sel = null;
+      state.jobId = null;
+      $('next2').disabled = true;
+      $('jobLog').innerHTML = '';
+      $('jobBar').style.width = '0%';
+      setupHourInput();
+      ['sumHours','sumPkg','payPkg','payHours'].forEach((id)=>$(id).textContent='—');
+      ['sumTotal','payTotal'].forEach((id)=>$(id).textContent='฿0');
+      goStep(1);
+    }
+  </script>
+</body>
+</html>

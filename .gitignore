@@ -6,14 +6,21 @@
 .env.*.local
 *.key
 *.pem
-prompts/answers*.txt           # อาจมี answer key — sensitive
+# อาจมี answer key — sensitive
+prompts/answers*.txt
 
+# ──────────────────────────────────────────────────────────────
 # PII — เลขบัตรประชาชน, รหัสผ่าน, mapping ชื่อจริง
-accounts.csv                   # NID + password ของ user (ห้าม commit เด็ดขาด)
+# ──────────────────────────────────────────────────────────────
+# NID + password ของ user (ห้าม commit เด็ดขาด)
+accounts.csv
 accounts_remaining.csv
-private_names.json             # mapping NID → ชื่อจริง (สำหรับ dashboard)
-smart_jobs.csv                 # NID + job_id
-nid_registry.json              # {sha256(NID): NID} สะสมทุก job — ให้ dashboard reverse hash
+# mapping NID → ชื่อจริง (สำหรับ dashboard)
+private_names.json
+# NID + job_id
+smart_jobs.csv
+# {sha256(NID): NID} สะสมทุก job — ให้ dashboard reverse hash
+nid_registry.json
 
 # ──────────────────────────────────────────────────────────────
 # Python
@@ -33,14 +40,18 @@ env/
 # Uploads & generated runtime files (อาจมีข้อมูล user)
 # ──────────────────────────────────────────────────────────────
 uploads/
-certs/                         # merged PDF ของ user — ข้อมูล personal
+# merged PDF ของ user — ข้อมูล personal
+certs/
 /tmp/
 screenshots/
 *.png.tmp
 
-# Answer bank exports (mighe contain question text — keep template only)
+# ──────────────────────────────────────────────────────────────
+# Answer bank exports (อาจมี question text — เก็บแค่ template)
+# ──────────────────────────────────────────────────────────────
 questions/answer_bank_*.json
-questions/dump.json            # อาจมีคำถามจริง — commit แค่ sample
+# อาจมีคำถามจริง — commit แค่ sample
+questions/dump.json
 !questions/sample.json
 
 # ──────────────────────────────────────────────────────────────
@@ -73,7 +84,7 @@ worker.log
 celery.log
 
 # ──────────────────────────────────────────────────────────────
-# IDE / OS
+# IDE / OS / tooling
 # ──────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
@@ -82,6 +93,7 @@ Thumbs.db
 *.swp
 *.swo
 .history/
+.claude/
 
 # ──────────────────────────────────────────────────────────────
 # Stubs (development-only — ไม่ใช่ production)
