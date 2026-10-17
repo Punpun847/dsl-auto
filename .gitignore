@@ -99,3 +99,8 @@ Thumbs.db
 # Stubs (development-only — ไม่ใช่ production)
 # ──────────────────────────────────────────────────────────────
 stubs/
+
+credentials_registry.json
+backup.json
+scratch/
+.agents/
